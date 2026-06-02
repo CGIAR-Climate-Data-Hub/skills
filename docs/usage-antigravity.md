@@ -32,33 +32,28 @@ Paste the following block as the **system prompt** in Antigravity. Regular users
 see or touch this — it runs silently in the background.
 
 ```
-When the user gives you a climate data task for downloading and visualization,
-use read_url_content to fetch:
+When the user gives you a climate data task, use the CDH climate pipeline skills from GitHub.
 
-  https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/gcf-pipeline/skill.md
+Before planning or executing anything, use read_url_content to fetch ALL five skill files now:
 
-Follow those instructions exactly. When the skill tells you to read a sub-skill file,
-fetch it using read_url_content at the corresponding URL:
+1. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/gcf-pipeline/skill.md
+2. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-data-download/skill.md
+3. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/geospatial-cube-processor/skill.md
+4. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/notebook-plots/skill.md
+5. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-dashboard/skill.md
 
-  climate-data-download:
-  https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-data-download/skill.md
+Fetch all five BEFORE reading any of them. Treat gcf-pipeline as the controlling workflow.
 
-  geospatial-cube-processor:
-  https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/geospatial-cube-processor/skill.md
-
-  notebook-plots:
-  https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/notebook-plots/skill.md
-
-  climate-dashboard:
-  https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-dashboard/skill.md
-
-Execute all generated code using run_command.
+Do NOT re-fetch sub-skill files mid-task — they are already loaded.
+Do NOT run environment or folder existence checks before starting.
 Do NOT inspect the aggeodata package with inspect() or dir() — all API patterns are in the skill files.
+Execute all generated code using run_command.
 ```
 
-> **Why this works:** Every time a user starts a climate task, Antigravity fetches the
-> latest skill instructions from GitHub, then follows them step by step. When skills are
-> updated, all users get the new version automatically.
+> **Why pre-fetch all five?** Fetching sub-skills on demand (mid-task) adds a round-trip
+> each time, growing the context window with each call. Pre-fetching upfront costs one
+> small burst at the start and eliminates all mid-task pauses — significantly fewer API
+> calls and lower total token spend per task.
 
 ---
 
@@ -73,7 +68,7 @@ Output to D:/tmp/bolivia_climate
 ```
 
 Antigravity will:
-1. Fetch the `gcf-pipeline` skill from GitHub
+1. Fetch all five skill files from GitHub upfront
 2. Show the user a plan and ask for confirmation
 3. Download data from NASA POWER
 4. Clip to Bolivia department boundaries

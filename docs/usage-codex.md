@@ -137,8 +137,8 @@ Save to D:/tmp/ethiopia_climate
 | | Antigravity | Codex |
 |--|-------------|-------|
 | URL fetch tool | `read_url_content` (built-in) | `curl` / `wget` / web tool |
-| URLs in system prompt | 1 (main skill only) | 5 (all skills upfront) |
-| Sub-skill loading | Automatic (follows references) | Manual (all pre-fetched) |
+| URLs in system prompt | 5 (all skills upfront) | 5 (all skills upfront) |
+| Sub-skill loading | Pre-fetched at task start | Pre-fetched at task start |
 | Execution tool | `run_command` | `run_command` or equivalent |
 | Offline fallback | Ask user | Ask user |
 

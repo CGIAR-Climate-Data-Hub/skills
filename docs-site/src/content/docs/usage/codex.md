@@ -75,8 +75,8 @@ more tokens. Start short; extend once the pipeline is verified.
 | | Antigravity | Codex |
 |--|-------------|-------|
 | URL fetch tool | `read_url_content` (built-in) | `curl` / `wget` / web tool |
-| URLs in system prompt | 1 (main skill only) | 5 (all skills upfront) |
-| Sub-skill loading | Automatic | Manual (all pre-fetched) |
+| URLs in system prompt | 5 (all skills upfront) | 5 (all skills upfront) |
+| Sub-skill loading | Pre-fetched at task start | Pre-fetched at task start |
 
 ## Troubleshooting
 
