@@ -1,10 +1,10 @@
 {
-  "repository": "https://raw.githubusercontent.com/anaguilarar/CDH_Skills/master",
+  "repository": "https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main",
   "skills": {
-    "gcf-pipeline": "/skills/gcf-pipeline/SKILL.md",
-    "climate-data-download": "/skills/climate-data-download/SKILL.md",
-    "geospatial-cube-processor": "/skills/geospatial-cube-processor/SKILL.md",
-    "notebook-plots": "/skills/notebook-plots/SKILL.md",
-    "climate-dashboard": "/skills/climate-dashboard/SKILL.md"
+    "gcf-pipeline": "/skills/gcf-pipeline/skill.md",
+    "climate-data-download": "/skills/climate-data-download/skill.md",
+    "geospatial-cube-processor": "/skills/geospatial-cube-processor/skill.md",
+    "notebook-plots": "/skills/notebook-plots/skill.md",
+    "climate-dashboard": "/skills/climate-dashboard/skill.md"
   }
 }

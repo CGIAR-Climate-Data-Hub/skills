@@ -35,22 +35,22 @@ see or touch this — it runs silently in the background.
 When the user gives you a climate data task for downloading and visualization,
 use read_url_content to fetch:
 
-  https://raw.githubusercontent.com/anaguilarar/CDH_Skills/master/skills/gcf-pipeline/SKILL.md
+  https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/gcf-pipeline/skill.md
 
 Follow those instructions exactly. When the skill tells you to read a sub-skill file,
 fetch it using read_url_content at the corresponding URL:
 
   climate-data-download:
-  https://raw.githubusercontent.com/anaguilarar/CDH_Skills/master/skills/climate-data-download/SKILL.md
+  https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-data-download/skill.md
 
   geospatial-cube-processor:
-  https://raw.githubusercontent.com/anaguilarar/CDH_Skills/master/skills/geospatial-cube-processor/SKILL.md
+  https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/geospatial-cube-processor/skill.md
 
   notebook-plots:
-  https://raw.githubusercontent.com/anaguilarar/CDH_Skills/master/skills/notebook-plots/SKILL.md
+  https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/notebook-plots/skill.md
 
   climate-dashboard:
-  https://raw.githubusercontent.com/anaguilarar/CDH_Skills/master/skills/climate-dashboard/SKILL.md
+  https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-dashboard/skill.md
 
 Execute all generated code using run_command.
 Do NOT inspect the aggeodata package with inspect() or dir() — all API patterns are in the skill files.
