@@ -17,6 +17,8 @@ code, and following established workflows. You don't need to know the tool names
 
 Skills live in `skills/`. Install or update them via Claude Code's skill system.
 
+![Skills orchestrator diagram](docs-site/src/assets/orchestrator.png)
+
 ---
 
 ## Skills catalog
