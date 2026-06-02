@@ -9,8 +9,8 @@ export default defineConfig({
       title: 'CDH Skills',
       description: 'AI-powered climate data workflows for agriculture and climate research.',
       logo: {
-        light: './src/assets/logo-light.svg',
-        dark: './src/assets/logo-dark.svg',
+        src: './src/assets/cgiar-climate-action-logo.png',
+        alt: 'CGIAR Climate Action',
         replacesTitle: false,
       },
       customCss: ['./src/styles/custom.css'],
