@@ -5,6 +5,8 @@ in agriculture and climate change research. Each skill turns a natural-language 
 ready-to-run workflow — from downloading raw climate rasters to building spatial datacubes and
 extracting agronomic indicators.
 
+📖 **Documentation site:** [cgiar-climate-data-hub.github.io/skills](https://cgiar-climate-data-hub.github.io/skills/skills/climate-dashboard/)
+
 ---
 
 ## What are skills?
