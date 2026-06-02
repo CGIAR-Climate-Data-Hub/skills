@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:data.chc.ucsb.edu)",
+      "Read(//d/OneDrive - CGIAR/scripts/aggeodata/**)",
+      "Bash(python -c \"from aggeodata.ingestion.cf_names import CF_VARIABLE_MAP, AGERA5_CF_MAP, to_cf_name, rename_cf_vars; from aggeodata.ingestion.chirps import CHIRPSDownloader; from aggeodata.ingestion.chirts import CHIRTSDownloader; from aggeodata.ingestion.nasa_power import NASAPowerDownloader, NASAPowerS3Downloader; from aggeodata.ingestion.agera5 import AgEra5Downloader, read_annual_data; print\\('All imports OK'\\); print\\('CF_VARIABLE_MAP sample:', {k: CF_VARIABLE_MAP[k] for k in list\\(CF_VARIABLE_MAP\\)[:5]}\\)\")",
+      "Bash(cat)",
+      "Bash(python3 /tmp/setup_check.py)",
+      "Bash(mkdir -p /mnt/data/bolivia_climate)",
+      "Bash(python3 /tmp/run_download.py)",
+<<<<<<< HEAD
+      "Read(D:/tmp/**)",
+      "Write(D:/tmp/**)",
+      "Bash(python *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(ls *)",
+      "Write(D:/OneDrive - CGIAR/scripts/cdh_skills/skills/climate-dashboard-workspace/**)"
+=======
+      "Bash(python3 *)"
+>>>>>>> d005e279fbb6b849a72b5c9c788355e17534d0be
+    ]
+  },
+  "disabledMcpjsonServers": [
+    "aggeodata"
+  ]
+}

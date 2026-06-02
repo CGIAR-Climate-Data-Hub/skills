@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "aggeodata": {
+      "command": "${AGGEODATA_PYTHON:-python}",
+      "args": ["-m", "aggeodata.mcp_server"],
+      "description": "aggeodata tools: download CHIRPS precipitation, CHIRTS-ERA5 temperature, AgERA5 agrometeorological indicators (including hourly RH at 06/09/12/15/18 UTC), and NASA POWER data for any country, region, or bounding box. Requires: pip install -e '.[download,mcp]' from the aggeodata project root. AgERA5 also needs ~/.cdsapirc. Set AGGEODATA_PYTHON to a specific interpreter (e.g. a conda env's python) if 'python' on PATH does not have aggeodata installed."
+    }
+  }
+}
