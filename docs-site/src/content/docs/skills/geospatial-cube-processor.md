@@ -1,0 +1,62 @@
+---
+title: Geospatial Cube Processor
+description: Clips rasters to admin boundaries, stacks multi-source datasets, and computes zonal statistics.
+sidebar:
+  order: 3
+---
+
+**Type:** Spatial processing  
+**Skill file:** `skills/geospatial-cube-processor/skill.md`  
+**Raw URL:** `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/geospatial-cube-processor/skill.md`
+
+---
+
+Writes geospatial processing functions directly into your existing Python script or notebook.
+Works with any gridded dataset (xarray, lat/lon, EPSG:4326) — climate, soil, elevation, or land use.
+
+## Functions
+
+| Function | Use when you say… |
+|----------|------------------|
+| `mask_to_admin` | "clip to", "mask by", "subset to [country/region]" |
+| `stack_datasets` | "combine", "stack", "merge rasters", "align grids" |
+| `summarize_by_admin` | "average per district", "zonal stats", "rainfall per province" |
+| (COG export) | "save as GeoTIFF", "export raster" |
+
+## `mask_to_admin`
+
+Clips an xarray Dataset to a country or admin boundary fetched from GADM v4.1.
+
+```python
+masked = mask_to_admin(ds, country_iso3="BOL", admin_level=1)
+```
+
+- `admin_level=0` → national boundary
+- `admin_level=1` → province/state
+- `admin_level=2` → district
+
+## `summarize_by_admin`
+
+Computes per-admin-unit statistics and returns a tidy DataFrame.
+
+```python
+df = summarize_by_admin(
+    ds, boundaries,
+    agg_method="mean",        # "mean", "sum", "min", "max"
+    temporal_freq="ME",       # "ME" monthly, "YE" annual, None = no resampling
+    output_csv="summary.csv"
+)
+```
+
+Output columns: `admin_unit`, `variable`, `time`, `value`
+
+## Common pitfalls
+
+:::caution[NASA POWER variable names]
+The downloaded NetCDF uses CF standard names, not the parameter codes.
+Use `rsds` (not `ALLSKY_SFC_SW_DWN`) and `sfcWind` (not `WS2M`) when accessing the dataset.
+:::
+
+- **Missing CRS:** always call `ds.rio.write_crs("EPSG:4326")` before clipping
+- **Dimension names:** patterns assume `lat`/`lon`; update `x_dim`/`y_dim` if your data uses `latitude`/`longitude`
+- **Memory:** for large datasets, use `ds.chunk({"time": 12})` to enable Dask lazy evaluation

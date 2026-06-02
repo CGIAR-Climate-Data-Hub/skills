@@ -1,0 +1,50 @@
+---
+import SkillCard from './SkillCard.astro';
+
+const SKILLS = [
+  {
+    name: 'GCF Pipeline',
+    slug: 'skills/gcf-pipeline',
+    kind: 'pipeline' as const,
+    summary: 'Full download → spatial processing → notebook + dashboard workflow in one conversation. Type one sentence; get a Jupyter notebook and interactive HTML dashboard.',
+    tags: ['gcf-pipeline', 'end-to-end', 'NASA POWER', 'CHIRPS', 'GADM'],
+    runtime: 'Claude Code · Antigravity · Codex',
+  },
+  {
+    name: 'Climate Data Download',
+    slug: 'skills/climate-data-download',
+    kind: 'download' as const,
+    summary: 'Downloads CHIRPS precipitation, CHIRTS-ERA5 temperature, AgERA5 agrometeorological indicators, and NASA POWER data for any country or bounding box.',
+    tags: ['CHIRPS', 'CHIRTS', 'AgERA5', 'NASA POWER', 'NetCDF'],
+    runtime: 'Python · aggeodata',
+  },
+  {
+    name: 'Geospatial Cube Processor',
+    slug: 'skills/geospatial-cube-processor',
+    kind: 'processing' as const,
+    summary: 'Clips rasters to admin boundaries, stacks multi-source datasets onto a common grid, and computes zonal statistics per admin unit — exports a tidy CSV.',
+    tags: ['xarray', 'rioxarray', 'GADM', 'zonal stats', 'COG'],
+    runtime: 'Python · xarray',
+  },
+  {
+    name: 'Notebook Plots',
+    slug: 'skills/notebook-plots',
+    kind: 'visualization' as const,
+    summary: 'Writes interactive Plotly charts (time series, seasonal patterns, admin comparisons, spatial maps) into a Jupyter notebook and exports a standalone HTML file.',
+    tags: ['Plotly', 'Jupyter', 'time series', 'choropleth'],
+    runtime: 'Python · Plotly',
+  },
+  {
+    name: 'Climate Dashboard',
+    slug: 'skills/climate-dashboard',
+    kind: 'visualization' as const,
+    summary: 'Builds a fully self-contained interactive HTML dashboard with KPI cards, Chart.js charts, region/year filters, and a sortable data table — no server needed.',
+    tags: ['Chart.js', 'HTML', 'dashboard', 'KPI', 'no-server'],
+    runtime: 'HTML · Chart.js',
+  },
+];
+---
+
+<div class="cdh-catalog">
+  {SKILLS.map((s) => <SkillCard {...s} />)}
+</div>

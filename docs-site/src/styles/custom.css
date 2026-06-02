@@ -1,0 +1,198 @@
+/* ── Google Fonts ──────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&family=Noto+Serif:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── Starlight accent overrides (light theme) ──────────────────── */
+:root {
+  --sl-color-accent-low:  #E4FBF6;
+  --sl-color-accent:      #17F1BD;
+  --sl-color-accent-high: #065F4A;
+
+  --sl-font-system:       'Noto Sans', Arial, system-ui, sans-serif;
+  --sl-font-system-mono:  'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* CGIAR palette exposed for component use */
+  --cdh-primary:        #033529;
+  --cdh-primary-accent: #17F1BD;
+  --cdh-primary-dark:   #010D09;
+  --cdh-lighter-green:  #065F4A;
+  --cdh-highlight:      #57FAD3;
+  --cdh-program:        #63A9FE;
+  --cdh-program-accent: #1955A6;
+  --cdh-bg:             #F7F5F2;
+  --cdh-surface:        #FFFFFF;
+  --cdh-border:         #E2E0DF;
+  --cdh-border-strong:  #C6C4C3;
+  --cdh-grey-8:         #1D1D1D;
+  --cdh-grey-6:         #555554;
+  --cdh-grey-5:         #727070;
+  --cdh-grey-1:         #E2E0DF;
+}
+
+/* ── Dark theme overrides ──────────────────────────────────────── */
+[data-theme='dark'] {
+  --sl-color-accent-low:  #033529;
+  --sl-color-accent:      #17F1BD;
+  --sl-color-accent-high: #57FAD3;
+}
+
+/* ── Headings: Noto Serif ──────────────────────────────────────── */
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+.page-title,
+.hero h1 {
+  font-family: 'Noto Serif', 'Times New Roman', Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+/* ── Nav & site title ──────────────────────────────────────────── */
+.site-title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--cdh-primary) !important;
+}
+
+/* ── Catalog card styles ───────────────────────────────────────── */
+.cdh-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 2rem;
+  not-global: true;
+}
+
+.cdh-card {
+  background: var(--cdh-surface);
+  border: 1px solid var(--cdh-border);
+  border-radius: 4px;
+  padding: 20px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow 0.12s, border-color 0.12s;
+  text-decoration: none;
+  color: inherit;
+}
+.cdh-card:hover {
+  box-shadow: 0 4px 16px rgba(3, 53, 41, 0.10);
+  border-color: var(--cdh-primary-accent);
+  text-decoration: none;
+}
+
+[data-theme='dark'] .cdh-card {
+  background: var(--sl-color-bg-sidebar);
+  border-color: var(--sl-color-hairline);
+}
+
+.cdh-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cdh-card-name {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--cdh-primary-dark);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+[data-theme='dark'] .cdh-card-name { color: var(--sl-color-white); }
+
+.cdh-card-kind {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.cdh-card-kind.pipeline {
+  background: rgba(3, 53, 41, 0.08);
+  color: var(--cdh-primary);
+}
+.cdh-card-kind.download {
+  background: rgba(25, 85, 166, 0.08);
+  color: var(--cdh-program-accent);
+}
+.cdh-card-kind.processing {
+  background: rgba(101, 127, 114, 0.10);
+  color: var(--cdh-lighter-green);
+}
+.cdh-card-kind.visualization {
+  background: rgba(185, 122, 0, 0.10);
+  color: #8C5A00;
+}
+
+.cdh-card-summary {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--cdh-grey-6);
+  flex: 1;
+}
+[data-theme='dark'] .cdh-card-summary { color: var(--sl-color-gray-3); }
+
+.cdh-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.cdh-tag {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 2px;
+  background: var(--cdh-grey-1);
+  color: var(--cdh-grey-8);
+  border: 1px solid transparent;
+}
+[data-theme='dark'] .cdh-tag {
+  background: rgba(255,255,255,0.07);
+  color: var(--sl-color-gray-2);
+}
+
+.cdh-card-footer {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--cdh-grey-5);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  border-top: 1px solid var(--cdh-border);
+  padding-top: 10px;
+}
+[data-theme='dark'] .cdh-card-footer {
+  color: var(--sl-color-gray-4);
+  border-color: var(--sl-color-hairline);
+}
+
+.cdh-card-footer .cdh-arrow {
+  margin-left: auto;
+  color: var(--cdh-primary-accent);
+  font-size: 14px;
+}
+
+/* ── Section label above catalogs ─────────────────────────────── */
+.cdh-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--cdh-grey-5);
+  margin-top: 2.5rem;
+  margin-bottom: 0.25rem;
+}
+
+/* ── Hero adjustments ─────────────────────────────────────────── */
+.hero > .hero-html {
+  display: none;  /* hide default image slot if empty */
+}
