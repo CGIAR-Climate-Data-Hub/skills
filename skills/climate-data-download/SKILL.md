@@ -160,6 +160,27 @@ print("Saved:", nc)
 Common codes: `ALLSKY_SFC_SW_DWN` (solar), `WS2M` (wind), `RH2M` (humidity),
 `T2M_MAX` / `T2M_MIN` (temperature), `PRECTOTCORR` (precipitation).
 
+**Backend routing:** S3 Zarr handles `T2M_MAX`, `T2M_MIN`, `RH2M`, `WS2M`.
+Everything else (e.g. `ALLSKY_SFC_SW_DWN`) goes through the REST API. When mixing
+both, the downloader aligns grids automatically via `interp_like` before merging.
+If a merge error occurs anyway, download each variable in a separate call and pass
+individual NetCDF paths to the processing stage.
+
+**Output variable names (CF standard names):** The saved NetCDF uses CF-style names,
+not the NASA POWER parameter codes. Use these names when accessing the dataset in
+xarray:
+
+| NASA POWER parameter code | CF name in NetCDF |
+|---------------------------|-------------------|
+| `ALLSKY_SFC_SW_DWN`       | `rsds`            |
+| `WS2M`                    | `sfcWind`         |
+| `T2M_MAX`                 | `tasmax`          |
+| `T2M_MIN`                 | `tasmin`          |
+| `RH2M`                    | `hurs`            |
+| `PRECTOTCORR`             | `pr`              |
+
+Always use the CF name (right column) when referencing variables after download.
+
 After each download report the saved path before continuing.
 
 **Skip/resume:** aggeodata automatically skips files that already exist on disk. If a download was interrupted, re-run and only missing files will be fetched.

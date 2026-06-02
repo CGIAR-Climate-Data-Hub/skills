@@ -49,7 +49,19 @@ Extract from context first. Ask only for what is genuinely unknown.
 
 ---
 
-## Step 2 — Write the three cells
+## Step 2 — Install required packages
+
+Run this before writing the notebook:
+
+```python
+import subprocess, sys
+subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "nbformat", "plotly"])
+```
+
+**CRITICAL — never name a temp script `inspect.py`:** It shadows Python's stdlib `inspect`
+module and breaks `xarray` and `importlib`. Use names like `make_nb.py`, `plot_check.py`.
+
+## Step 3 — Write the three cells
 
 ### Cell 1 — Markdown header
 
@@ -191,6 +203,36 @@ fig.show()
 
 ---
 
+## Step 4 — Export standalone HTML dashboard
+
+After writing the notebook, execute the plot code **in this session** and save the figure
+to a self-contained HTML file at `{OUTPUT_FOLDER}/{country}_{variable}_{year}.html`.
+
+Run this block (substituting the actual plot code from Step 3):
+
+```python
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+
+df = pd.read_csv("{CSV_PATH}")
+df["time"] = pd.to_datetime(df["time"], errors="coerce")
+df["month"] = df["time"].dt.month
+
+# --- paste the exact Cell 3 plot code here, ending with fig = ... ---
+# (do NOT call fig.show())
+
+html_path = "{OUTPUT_FOLDER}/{country}_{variable}_{year}.html"
+fig.write_html(html_path, include_plotlyjs="cdn")
+print("Dashboard saved:", html_path)
+```
+
+`include_plotlyjs="cdn"` keeps the file small (~5 KB) by loading Plotly from a CDN.
+For fully offline use, pass `include_plotlyjs=True` (~3 MB self-contained).
+
+---
+
 ## Colorscale + units reference
 
 | Variable | Colorscale | Units |
@@ -207,5 +249,6 @@ fig.show()
 ## Response style
 
 - Create the notebook at `{OUTPUT_FOLDER}/{country}_{variable}_{year}.ipynb` using `nbformat`
-- After writing say: *"Open `{notebook_path}` and run all cells — the chart renders inline."*
+- Create the HTML dashboard at `{OUTPUT_FOLDER}/{country}_{variable}_{year}.html` (Step 4)
+- After both are written say: *"Open `{notebook_path}` and run all cells, or open `{html_path}` directly in a browser."*
 - Multiple variables → default to `dashboard`; offer individual charts if user prefers

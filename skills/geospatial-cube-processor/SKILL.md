@@ -242,5 +242,6 @@ def summarize_by_admin(
 
 - **Missing CRS**: Always call `ds.rio.write_crs("EPSG:4326")` before clipping — datasets loaded from NetCDF often lack it
 - **Dimension names**: The patterns assume `lat` and `lon`. If the user's data uses `latitude`/`longitude` or `x`/`y`, update `x_dim`/`y_dim` accordingly
+- **NASA POWER variable names**: The downloaded NetCDF uses CF standard names, not the NASA POWER parameter codes. Reference variables by their CF name: `rsds` (solar radiation), `sfcWind` (wind speed), `tasmax`/`tasmin` (temperature), `hurs` (relative humidity), `pr` (precipitation). Using the parameter code (e.g. `ALLSKY_SFC_SW_DWN`) as a variable name will return a KeyError — always use the CF name.
 - **GADM rate limits**: If fetching many admin boundaries in a loop, encourage caching the GeoDataFrame rather than re-fetching per unit
 - **Memory**: For large Datasets, suggest `ds.chunk({"time": 12})` before clipping to enable Dask lazy evaluation
