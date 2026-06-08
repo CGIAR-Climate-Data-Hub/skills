@@ -38,7 +38,7 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Usage guides',
+          label: 'Setup',
           items: [
             { label: 'Claude Code', slug: 'usage/claude-code' },
             { label: 'Antigravity', slug: 'usage/antigravity' },

@@ -5,6 +5,11 @@ sidebar:
   order: 3
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs>
+<TabItem label="Explanation">
+
 **Type:** Spatial processing  
 **Skill file:** `skills/geospatial-cube-processor/skill.md`  
 **Raw URL:** `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/geospatial-cube-processor/skill.md`
@@ -60,3 +65,60 @@ Use `rsds` (not `ALLSKY_SFC_SW_DWN`) and `sfcWind` (not `WS2M`) when accessing t
 - **Missing CRS:** always call `ds.rio.write_crs("EPSG:4326")` before clipping
 - **Dimension names:** patterns assume `lat`/`lon`; update `x_dim`/`y_dim` if your data uses `latitude`/`longitude`
 - **Memory:** for large datasets, use `ds.chunk({"time": 12})` to enable Dask lazy evaluation
+
+</TabItem>
+<TabItem label="Claude Code">
+
+Complete the [Claude Code setup](../usage/claude-code/) first, then launch `claude` from inside the `skills/` folder.
+
+**Example request**
+
+```
+Clip the NetCDF at D:/tmp/ghana_data to the Ashanti region (admin level 1)
+and compute monthly mean values per district. Save the summary to D:/tmp/ghana_data/summary.csv
+```
+
+This skill can also be triggered automatically within the [GCF Pipeline](../gcf-pipeline/).
+
+:::note[No standalone example yet]
+A full worked example for this skill is coming soon. [Contribute one on GitHub](https://github.com/CGIAR-Climate-Data-Hub/skills).
+:::
+
+</TabItem>
+<TabItem label="Antigravity">
+
+Complete the [Antigravity setup](../usage/antigravity/) first, including the one-time system prompt.
+
+**Example request**
+
+```
+Clip the NetCDF at D:/tmp/ghana_data to the Ashanti region (admin level 1)
+and compute monthly mean values per district. Save the summary to D:/tmp/ghana_data/summary.csv
+```
+
+This skill can also be triggered automatically within the [GCF Pipeline](../gcf-pipeline/).
+
+:::note[No standalone example yet]
+A full worked example for this skill is coming soon. [Contribute one on GitHub](https://github.com/CGIAR-Climate-Data-Hub/skills).
+:::
+
+</TabItem>
+<TabItem label="Codex">
+
+Complete the [OpenAI Codex setup](../usage/codex/) first, including the one-time system prompt.
+
+**Example request**
+
+```
+Clip the NetCDF at D:/tmp/ghana_data to the Ashanti region (admin level 1)
+and compute monthly mean values per district. Save the summary to D:/tmp/ghana_data/summary.csv
+```
+
+This skill can also be triggered automatically within the [GCF Pipeline](../gcf-pipeline/).
+
+:::note[No standalone example yet]
+A full worked example for this skill is coming soon. [Contribute one on GitHub](https://github.com/CGIAR-Climate-Data-Hub/skills).
+:::
+
+</TabItem>
+</Tabs>

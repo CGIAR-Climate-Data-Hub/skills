@@ -1,15 +1,14 @@
 ---
 title: Claude Code
-description: Run the full GCF pipeline from your terminal with direct MCP server integration.
+description: Set up Claude Code with the aggeodata MCP server for climate data workflows.
 sidebar:
   order: 1
 ---
 
 **Audience:** Developers with a Claude Pro / Max / Team subscription and Python installed.
 
-Claude Code is the recommended way to run the full pipeline. It connects directly to the
-`aggeodata` MCP server, reads the skills automatically from the `skills/` folder, and
-executes all code locally in your terminal.
+Claude Code connects directly to the `aggeodata` MCP server, reads the skills automatically
+from the `skills/` folder, and executes all code locally in your terminal.
 
 ## Prerequisites
 
@@ -44,29 +43,6 @@ claude
 
 At startup you should see `✓ aggeodata MCP server connected`. If not, run `/mcp` inside
 Claude Code — it should list `aggeodata`. Verify `.mcp.json` exists in the current directory.
-
-## Step 4 — Type your request
-
-```
-Download and visualize monthly accumulated solar radiation and wind speed
-from NASA POWER for Bolivia from 2020 to 2022, per department (admin level 1).
-Output to D:/tmp/bolivia_climate
-```
-
-Claude will show a plan, wait for confirmation, then deliver a Jupyter notebook and
-HTML dashboard.
-
-## More example prompts
-
-```
-Show me accumulated precipitation for Kenya for the 2021 long rains
-(March–May) at district level. Save to D:/tmp/kenya_2021
-```
-
-```
-Annual mean temperature and reference ET for Ethiopia per region, 2018–2022.
-Output to D:/tmp/ethiopia_climate
-```
 
 ## Troubleshooting
 

@@ -1,6 +1,6 @@
 ---
 title: OpenAI Codex
-description: Run the GCF pipeline in OpenAI Codex — all skill URLs provided upfront in the system prompt.
+description: Set up OpenAI Codex with the CDH skills system prompt for climate data workflows.
 sidebar:
   order: 3
 ---
@@ -63,19 +63,6 @@ at the start of each new climate task, unless they were already fetched in the s
 Do NOT inspect the aggeodata package with inspect() or dir() — all API patterns are in the
 skill files.
 ```
-
-## Step 1 — User types one sentence
-
-```
-Download and visualize monthly accumulated solar radiation and wind speed
-from NASA POWER for Bolivia from 2020 to 2022, per department (admin level 1).
-Output to D:/tmp/bolivia_climate
-```
-
-:::tip[Keep the date range short for testing]
-2–3 years is fast (~1–2 min total). 10+ years can take 15–30 min and significantly
-more tokens. Start short; extend once the pipeline is verified.
-:::
 
 ## Antigravity vs Codex
 

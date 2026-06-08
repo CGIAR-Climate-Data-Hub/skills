@@ -1,6 +1,6 @@
 ---
 title: Antigravity
-description: Run the GCF pipeline in Antigravity — no terminal, no Claude subscription needed.
+description: Set up Antigravity with the CDH skills system prompt for climate data workflows.
 sidebar:
   order: 2
 ---
@@ -9,7 +9,7 @@ sidebar:
 after the one-time system prompt setup.
 
 Antigravity loads skill files directly from GitHub at runtime using its `read_url_content`
-tool — you always get the latest pipeline version automatically.
+tool — you always get the latest skill version automatically.
 
 ## Prerequisites
 
@@ -48,19 +48,8 @@ Execute all generated code using run_command.
 
 :::tip[Why pre-fetch all five?]
 Fetching sub-skills on demand mid-task adds one round-trip each time, compounding context growth.
-Pre-fetching upfront costs one small burst and eliminates all mid-task pauses — significantly
-fewer API calls and lower total token spend per task.
+Pre-fetching upfront costs one small burst and eliminates all mid-task pauses.
 :::
-
-## Step 1 — User types one sentence
-
-```
-Download and visualize monthly accumulated solar radiation and wind speed
-from NASA POWER for Bolivia from 2020 to 2022, per department (admin level 1).
-Output to D:/tmp/bolivia_climate
-```
-
-Antigravity fetches all five skill files upfront, shows a plan, and delivers the outputs.
 
 ## Troubleshooting
 
