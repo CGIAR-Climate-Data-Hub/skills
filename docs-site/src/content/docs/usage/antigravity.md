@@ -23,33 +23,9 @@ tool — you always get the latest skill version automatically.
 pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
 ```
 
-## Step 0 — One-time system prompt (administrator)
+## Step 0 — System prompt
 
-Paste this block as the **system prompt** in Antigravity. Regular users never touch this.
-
-```
-When the user gives you a climate data task, use the CDH climate pipeline skills from GitHub.
-
-Before planning or executing anything, use read_url_content to fetch ALL five skill files now:
-
-1. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/gcf-pipeline/skill.md
-2. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-data-download/SKILL.md
-3. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/geospatial-cube-processor/SKILL.md
-4. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/notebook-plots/SKILL.md
-5. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-dashboard/SKILL.md
-
-Fetch all five BEFORE reading any of them. Treat gcf-pipeline as the controlling workflow.
-
-Do NOT re-fetch sub-skill files mid-task — they are already loaded.
-Do NOT run environment or folder existence checks before starting.
-Do NOT inspect the aggeodata package with inspect() or dir() — all API patterns are in the skill files.
-Execute all generated code using run_command.
-```
-
-:::tip[Why pre-fetch all five?]
-Fetching sub-skills on demand mid-task adds one round-trip each time, compounding context growth.
-Pre-fetching upfront costs one small burst and eliminates all mid-task pauses.
-:::
+Each skill page includes the system prompt to paste into Antigravity. Find it in the **Antigravity** tab of the skill you want to use — for example, [GCF Pipeline → Antigravity](../skills/gcf-pipeline/).
 
 ## Troubleshooting
 

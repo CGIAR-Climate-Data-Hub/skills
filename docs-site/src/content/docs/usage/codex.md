@@ -23,46 +23,9 @@ files, so all five URLs are provided upfront in the system prompt.
 pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
 ```
 
-## Step 0 — One-time system prompt (administrator)
+## Step 0 — System prompt
 
-Paste this block as the **system prompt** or **custom instructions** in Codex.
-
-```
-When the user gives you a climate data task, use the CDH climate pipeline skills from GitHub.
-
-Before planning or executing anything, fetch and read ALL of these skill files:
-
-1. Main pipeline orchestrator:
-   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/gcf-pipeline/skill.md
-
-2. Data download sub-skill:
-   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-data-download/SKILL.md
-
-3. Geospatial processing sub-skill:
-   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/geospatial-cube-processor/SKILL.md
-
-4. Notebook plotting sub-skill:
-   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/notebook-plots/SKILL.md
-
-5. Dashboard sub-skill:
-   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-dashboard/SKILL.md
-
-Treat the gcf-pipeline file as the controlling workflow. Treat the other four as delegated
-sub-skills referenced by that workflow.
-
-To fetch these files: if your environment has a URL-reading tool, use it. Otherwise use curl,
-wget, Invoke-WebRequest, or any equivalent shell command. If network access is blocked, tell
-the user exactly which URLs could not be read and ask for approval.
-
-Execute all generated code using run_command, or the closest equivalent shell/code-execution
-tool available in your environment.
-
-Do NOT invent the skill contents from memory. Fetch the current files from the URLs above
-at the start of each new climate task, unless they were already fetched in the same session.
-
-Do NOT inspect the aggeodata package with inspect() or dir() — all API patterns are in the
-skill files.
-```
+Each skill page includes the system prompt to paste into Codex. Find it in the **Codex** tab of the skill you want to use — for example, [GCF Pipeline → Codex](../skills/gcf-pipeline/).
 
 ## Antigravity vs Codex
 
