@@ -1,22 +1,9 @@
 ---
 name: spatial-crop-modeler
-description: |
-  Expert orchestrator for spatial crop model simulations using ag-cube-cm + aggeodata.
-  Use this skill whenever the user mentions: DSSAT, crop model, yield simulation,
-  maize/wheat/bean/soybean yield, planting date analysis, spatial crop modeling,
-  ag-cube-cm, SoilGrids, CHIRPS, CHIRTS, AgERA5, or any combination of climate/soil
-  data with a process-based crop model. Trigger even if the user only says "run DSSAT"
-  or "simulate yield" without mentioning the full stack — they almost certainly need
-  this workflow. Also trigger when the user asks to interpret HWAM output or wants to
-  understand why pixels were skipped.
-compatibility:
-  tools: [bash, file_write]
-  platforms: [claude-code, codex, antigravity, gemini-cli]
-  science_bundle: true
-  min_context_tokens: 8000
-author: Climate Data Hub — CGIAR
-repository: https://github.com/anaguilarar/spatial-crop-modeler-skill
-license: MIT
+description: "Expert orchestrator for spatial crop model simulations using ag-cube-cm + aggeodata. Use this skill whenever the user mentions: DSSAT, crop model, yield simulation, maize/wheat/bean/soybean yield, planting date analysis, spatial crop modeling, ag-cube-cm, SoilGrids, CHIRPS, CHIRTS, AgERA5, or any combination of climate/soil data with a process-based crop model. Trigger even if the user only says \"run DSSAT\" or \"simulate yield\" without mentioning the full stack — they almost certainly need this workflow. Also trigger when the user asks to interpret HWAM output or wants to understand why pixels were skipped."
+author: "Climate Data Hub — CGIAR"
+repository: "https://github.com/anaguilarar/spatial-crop-modeler-skill"
+license: "MIT"
 ---
 
 # Spatial Crop Modeler
