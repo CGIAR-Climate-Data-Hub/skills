@@ -28,6 +28,24 @@ in the skill files.
 - "per department / per region / per province / per district" combined with a variable name
 - any prompt that clearly implies **all three steps**: fetch data + spatial aggregation + plot
 
+### climate-data-download trigger phrases (read `skills/climate-data-download/SKILL.md` when any of these appear)
+
+- "download data for", "get data for", "fetch data for"
+- "download [variable] for [country/year]"
+- "get [variable] data for [region]"
+- "fetch climate data", "retrieve weather data"
+- "I need [variable] data for"
+- any prompt that implies **fetching/downloading only** with no visualization or modeling requested
+
+### spatial-crop-modeler trigger phrases (read `skills/spatial-crop-modeler/skill.md` when any of these appear)
+
+- "yield prediction for", "predict yield for", "crop yield for"
+- "run crop model for", "simulate crop for"
+- "spatial crop modeling", "crop simulation over"
+- "model [crop] in [country/region]"
+- "estimate production for", "forecast harvest for"
+- any prompt that implies **running a crop model spatially** over a region or country
+
 ### How to invoke a skill
 
 1. Read the skill file (`skills/<skill-name>/SKILL.md`) with the Read tool.

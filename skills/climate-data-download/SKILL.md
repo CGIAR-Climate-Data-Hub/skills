@@ -60,24 +60,30 @@ Alternatively, accept a **bounding box** `[xmin, ymin, xmax, ymax]` in EPSG:4326
 
 ## Step 2 — Show the routing plan and confirm
 
-Before calling any tool, display the mapping and ask for confirmation:
+Before calling any tool, display the mapping using an ASCII box table and ask for confirmation:
 
 ```
-Here's what I'll download and from where:
+┌─────────────────┬─────────────┬───────────────────────────────────────────────┐
+│    Variable     │   Source    │                     Tool                      │
+├─────────────────┼─────────────┼───────────────────────────────────────────────┤
+│ Precipitation   │ CHIRPS      │ download_chirps                               │
+├─────────────────┼─────────────┼───────────────────────────────────────────────┤
+│ Tmax / Tmin     │ CHIRTS-ERA5 │ download_chirts                               │
+├─────────────────┼─────────────┼───────────────────────────────────────────────┤
+│ Solar radiation │ AgERA5      │ download_agera5 (solar_radiation)             │
+├─────────────────┼─────────────┼───────────────────────────────────────────────┤
+│ RH 06:00        │ AgERA5      │ download_agera5 (relative_humidity_06)        │
+├─────────────────┼─────────────┼───────────────────────────────────────────────┤
+│ Reference ET    │ AgERA5      │ download_agera5 (reference_evapotranspiration)│
+└─────────────────┴─────────────┴───────────────────────────────────────────────┘
 
-| Variable          | Source       | Tool                  | Key / Parameter      |
-|-------------------|--------------|-----------------------|----------------------|
-| Precipitation     | CHIRPS       | download_chirps       | —                    |
-| Tmax / Tmin       | CHIRTS-ERA5  | download_chirts       | —                    |
-| Solar radiation   | NASA POWER   | download_nasa_power   | ALLSKY_SFC_SW_DWN    |
-| RH 06:00          | AgERA5       | download_agera5       | relative_humidity_06 |
-| Reference ET      | AgERA5       | download_agera5       | reference_evapotranspiration |
+Country: Ghana | Period: 2020-01-01 → 2022-12-31 | Output: D:/data/ghana_climate
 
-Country: Ghana | Period: 2020-01-01 → 2022-12-31 | Region: full country
-Output: D:/data/ghana_climate
-
-Shall I proceed?
+Note: AgERA5 is in the plan — do you have ~/.cdsapirc configured?
+Shall I proceed, or would you like to change any source?
 ```
+
+Include the "Note: AgERA5..." line only when AgERA5 appears in the plan. Omit it otherwise.
 
 Only continue once the user confirms.
 
@@ -88,24 +94,25 @@ Before the first tool call, verify:
 - If AgERA5 is in the plan: CDS API key is configured (see below)
 - Output folder path has **no spaces**
 
-## Step 4 — Download in sequence
+## Step 4 — Generate YAML config and run pipeline
 
-If the `aggeodata` MCP server is available, call tools in order: CHIRPS → CHIRTS → NASA POWER → AgERA5.
+**Always use the YAML pipeline, never call downloaders directly.**  
+Direct API calls bypass the rate-limit safeguards and have caused CrowdSec bans on `data.chc.ucsb.edu`.
 
-**If MCP is not available**, use `run_command` with the Python code blocks below. Do NOT inspect the aggeodata package — use these exact patterns directly:
+### ncores rule (critical)
 
-### Install (cross-platform, run once)
+| Sources in plan | ncores to set |
+|-----------------|--------------|
+| CHIRPS or CHIRTS present | **1** — CrowdSec bans >1 worker on data.chc.ucsb.edu |
+| AgERA5 only | 4 (CDS API handles parallel requests) |
+| NASA POWER only | 1 (S3 Zarr backend, ncores ignored) |
 
-```python
-import subprocess, sys
-def _ensure():
-    try:
-        import aggeodata, s3fs, zarr
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q",
-            "aggeodata[download] @ git+https://github.com/anaguilarar/aggeodata.git",
-            "s3fs", "zarr"])
-_ensure()
+When mixing CHIRPS/CHIRTS with AgERA5, set `ncores: 1` (CHIRPS safety takes priority).
+
+### Install (run once)
+
+```bash
+pip install "aggeodata[download] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
 ```
 
 ### Resolve country → extent (skip if bbox given)
@@ -114,76 +121,71 @@ _ensure()
 from aggeodata.ingestion.boundaries import _fetch_geojson_cached
 gdf = _fetch_geojson_cached("{ISO3}", 0)
 extent = [round(v, 4) for v in gdf.total_bounds.tolist()]
+# extent = [xmin, ymin, xmax, ymax]
 ```
 
-### CHIRPS precipitation
+### Generate the YAML config
+
+Build the config file from the confirmed plan. Use CF variable names as keys under `CLIMATE.variables`.
+
+```yaml
+DATES:
+  starting_date: "{START}"   # YYYY-MM-DD
+  ending_date:   "{END}"
+
+SPATIAL_INFO:
+  spatial_file: null
+  extent: [{XMIN}, {YMIN}, {XMAX}, {YMAX}]  # from extent resolution above
+
+CLIMATE:
+  variables:
+    pr:
+      source: chirps
+    tasmax:
+      source: chirts
+    tasmin:
+      source: chirts
+    rsds:
+      source: nasa_power   # or agera5 — per user confirmation
+
+SOIL:
+  enabled: false
+
+GENERAL:
+  suffix:         "{SUFFIX}"   # short label, no spaces
+  ncores:         1            # always 1 when chirps or chirts is present
+  task:           "download"
+  agera5_version: "2_0"
+
+PATHS:
+  output_path: "{OUTPUT}"
+```
+
+**CF variable → valid source mapping** (schema-enforced — wrong pairs will raise a validation error):
+
+| CF variable | Valid sources |
+|-------------|--------------|
+| `pr` | `chirps`, `agera5`, `nasa_power` |
+| `tasmax` / `tasmin` | `chirts`, `agera5`, `nasa_power` |
+| `rsds` | `agera5`, `nasa_power` |
+| `hurs`, `hurs_06/09/12/15/18` | `agera5` |
+| `etr`, `vp`, `vpd`, `tdps`, `sfcWind` | `agera5` |
+
+### Run the pipeline
 
 ```python
-from aggeodata.ingestion.chirps import CHIRPSDownloader
-import xarray as xr, pathlib
-dl = CHIRPSDownloader()
-file_map = dl.download(extent=extent, starting_date="{START}", ending_date="{END}",
-                       output_folder="{OUTPUT}/chirps_daily", ncores=2)
-ds = xr.open_mfdataset(sorted(file_map.values()), combine="by_coords")
-nc = str(pathlib.Path("{OUTPUT}") / "chirps.nc")
-ds.to_netcdf(nc); print("Saved:", nc)
+from aggeodata.pipelines.download import run_download
+results = run_download("{OUTPUT}/config.yaml")
 ```
 
-### CHIRTS temperature (Tmax / Tmin)
-
-```python
-from aggeodata.ingestion.chirts import CHIRTSDownloader
-import xarray as xr, pathlib
-dl = CHIRTSDownloader(variables=["tmax", "tmin"])
-file_map = dl.download(extent=extent, starting_date="{START}", ending_date="{END}",
-                       output_folder="{OUTPUT}/chirts_daily", ncores=2)
-ds = xr.open_mfdataset(sorted(file_map.values()), combine="by_coords")
-ds["tmean"] = (ds["tmax"] + ds["tmin"]) / 2
-nc = str(pathlib.Path("{OUTPUT}") / "chirts.nc")
-ds.to_netcdf(nc); print("Saved:", nc)
+Or from the command line:
+```bash
+python -m aggeodata.pipelines.download {OUTPUT}/config.yaml
 ```
 
-### NASA POWER (any variable)
+Save the YAML to `{OUTPUT}/config.yaml` before calling `run_download`.
 
-Use `NASAPowerDownloader` for all NASA POWER variables — it automatically routes each
-parameter to the fastest backend (S3 Zarr or REST) and returns one merged file.
-
-```python
-from aggeodata.ingestion.nasa_power import NASAPowerDownloader
-
-dl = NASAPowerDownloader(parameters=["{VAR_CODE}", "{VAR_CODE2}"])
-nc = dl.download(extent=extent, starting_date="{START}", ending_date="{END}",
-                 output_folder="{OUTPUT}")
-print("Saved:", nc)
-```
-
-Common codes: `ALLSKY_SFC_SW_DWN` (solar), `WS2M` (wind), `RH2M` (humidity),
-`T2M_MAX` / `T2M_MIN` (temperature), `PRECTOTCORR` (precipitation).
-
-**Backend routing:** S3 Zarr handles `T2M_MAX`, `T2M_MIN`, `RH2M`, `WS2M`.
-Everything else (e.g. `ALLSKY_SFC_SW_DWN`) goes through the REST API. When mixing
-both, the downloader aligns grids automatically via `interp_like` before merging.
-If a merge error occurs anyway, download each variable in a separate call and pass
-individual NetCDF paths to the processing stage.
-
-**Output variable names (CF standard names):** The saved NetCDF uses CF-style names,
-not the NASA POWER parameter codes. Use these names when accessing the dataset in
-xarray:
-
-| NASA POWER parameter code | CF name in NetCDF |
-|---------------------------|-------------------|
-| `ALLSKY_SFC_SW_DWN`       | `rsds`            |
-| `WS2M`                    | `sfcWind`         |
-| `T2M_MAX`                 | `tasmax`          |
-| `T2M_MIN`                 | `tasmin`          |
-| `RH2M`                    | `hurs`            |
-| `PRECTOTCORR`             | `pr`              |
-
-Always use the CF name (right column) when referencing variables after download.
-
-After each download report the saved path before continuing.
-
-**Skip/resume:** aggeodata automatically skips files that already exist on disk. If a download was interrupted, re-run and only missing files will be fetched.
+**Skip/resume:** aggeodata automatically skips files that already exist on disk. Re-run safely after interruptions.
 
 ## Step 5 — Summary
 
@@ -200,7 +202,21 @@ Download complete:
 | RH 06:00      | AgERA5      | D:/data/ghana_climate/agera5/...      | ✓ OK    |
 ```
 
-Then tell the user: *"The downloaded files are ready to be assembled into a datacube. See the datacube-stack skill for the next step."*
+Then ask:
+
+```
+All files downloaded. Would you like to create a datacube by stacking these into a single aligned multi-variable NetCDF?
+
+| Setting            | Default                  |
+|--------------------|--------------------------|
+| Target resolution  | coarsest                 |
+| Resampling method  | bilinear                 |
+| Output file        | {OUTPUT}/datacube.nc     |
+
+Shall I proceed with the datacube, or change any of these settings?
+```
+
+Only continue to datacube creation once the user confirms. If confirmed, invoke the `geospatial-cube-processor` skill (`stack_datasets` function) using the downloaded NetCDF paths.
 
 ---
 
