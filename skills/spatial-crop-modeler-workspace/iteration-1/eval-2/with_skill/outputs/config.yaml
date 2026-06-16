@@ -1,0 +1,33 @@
+mode: full_pipeline
+general:
+  country: Ethiopia
+  country_code: ETH
+  working_path: E:/ethiopia_wheat
+  ncores: 2
+bbox: [37.0, 8.0, 38.0, 9.0]
+dates:
+  start_date: "2018-01-01"
+  end_date:   "2020-12-31"
+suffix: eth_wheat_2018_2020
+climate:
+  variables:
+    pr:     {source: chirps}
+    tasmax: {source: chirts}
+    tasmin: {source: chirts}
+    rsds:   {source: nasa_power}
+  output_path: E:/ethiopia_wheat/climate_raw
+soil:
+  variables: [clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500]
+  depths:    ["0-5", "5-15", "15-30", "30-60", "60-100"]
+  output_path: E:/ethiopia_wheat/soil_raw
+spatial:
+  output_path: E:/ethiopia_wheat/yield_eth_wheat.nc
+simulation:
+  crop:
+    name: Wheat
+    cultivar: IB1015
+  management:
+    planting_date: "2018-10-01"
+    n_planting_windows: 1
+    planting_window_days: 14
+  max_pixels: null

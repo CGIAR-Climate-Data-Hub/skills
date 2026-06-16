@@ -1,0 +1,259 @@
+---
+title: Spatial Crop Modeler
+description: Runs DSSAT pixel-by-pixel across climate and soil datacubes to produce spatially-explicit yield maps for maize, wheat, and bean.
+sidebar:
+  order: 5
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs>
+<TabItem label="Explanation">
+
+**Type:** Crop modeling  
+**Skill file:** `skills/spatial-crop-modeler/SKILL.md`  
+**Raw URL:** `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/spatial-crop-modeler/SKILL.md`
+
+---
+
+Orchestrates a full spatially-explicit crop yield simulation. You describe the area, crop,
+and planting date. The skill checks your environment, generates a validated YAML config,
+and runs DSSAT across every valid pixel in the datacube using `ag-cube-cm`.
+
+## Two modes
+
+| Mode | When to use | What happens |
+|------|-------------|--------------|
+| `with_cubes` | Weather and soil NetCDF files already on disk | Skip download — go straight to DSSAT |
+| `full_pipeline` | Starting from scratch | Download CHIRPS + CHIRTS + AgERA5/NASA POWER + SoilGrids, build datacubes, then simulate |
+
+## Climate sources
+
+| Variable | Source | Notes |
+|----------|--------|-------|
+| Precipitation | CHIRPS | 0.05 deg, 1981–present, no API key |
+| Max/Min temperature | CHIRTS | 0.05 deg, no API key |
+| Solar radiation | AgERA5 | 0.1 deg — CDS key required at `~/.cdsapirc` |
+| Solar radiation | NASA POWER | 0.5 deg — no API key, use when CDS unavailable |
+
+## Supported crops and cultivars
+
+| Cultivar | Crop | Best for |
+|----------|------|----------|
+| `IB1072` | Maize | Tropical / Central America / Sub-Saharan Africa |
+| `PC0002` | Maize | Temperate regions |
+| `IB1015` | Spring Wheat | Ethiopia, South Asia |
+| `IB1487` | Winter Wheat | Europe, North Africa |
+| `IB0001` | Bean / Soybean | General |
+
+## Output
+
+A NetCDF file with variable `HWAM` (harvest grain yield, kg/ha) and dimensions:
+
+```
+planting_window × year × y (latitude) × x (longitude)
+```
+
+After every run the skill reports:
+
+```
+pixels_ok      : 7   — DSSAT ran successfully
+pixels_skipped : 18  — NaN weather or soil (expected at grid edges)
+pixels_failed  : 0   — DSSAT runtime errors (investigate if > 5%)
+mean HWAM      : 8782 kg/ha
+```
+
+Skipped pixels are normal — they occur where the coarser AgERA5 (0.1 deg) or SoilGrids
+grids do not fully cover the finer CHIRPS (0.05 deg) grid edges.
+
+## Install
+
+```bash
+pip install "ag-cube-cm[models] @ git+https://github.com/anaguilarar/ag-cube-cm.git"
+pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git"
+```
+
+:::caution[working_path must have no spaces]
+DSSAT is a Fortran program that silently fails on paths with spaces.
+Use `D:/dssat_work`, not `D:/OneDrive - CGIAR/...` for `working_path`.
+Output NetCDF files can go anywhere.
+:::
+
+## AgERA5 setup (CDS key)
+
+Required only when using AgERA5 for solar radiation. Register free at
+[cds.climate.copernicus.eu](https://cds.climate.copernicus.eu/), then create `~/.cdsapirc`:
+
+```
+url: https://cds.climate.copernicus.eu/api/v2
+key: <YOUR-UID>:<YOUR-API-KEY>
+```
+
+Use `rsds: nasa_power` in the config to skip this requirement entirely.
+
+## Config schema reference
+
+**with_cubes**
+
+```yaml
+mode: with_cubes
+
+weather_path: D:/cubes/climate_hnd_2021_2021.nc
+soil_path:    D:/cubes/soil_hnd.nc
+output_path:  D:/results/yield_hnd.nc
+
+simulation:
+  country:      Honduras
+  country_code: HND
+  model:        dssat
+  working_path: D:/dssat_work   # no spaces
+  ncores:       2
+  max_pixels:   null
+
+crop:
+  name:     Maize
+  cultivar: IB1072
+
+management:
+  planting_date:        "2021-05-15"
+  n_planting_windows:   1
+  planting_window_days: 14
+  fertilizer_schedule:  []
+```
+
+**full_pipeline**
+
+```yaml
+mode: full_pipeline
+
+output_dir: D:/ag_cube_test/hnd_small
+suffix:     hnd_small
+
+spatial:
+  bbox: [-87.5, 14.2, -87.2, 14.5]   # [xmin, ymin, xmax, ymax] WGS-84
+
+dates:
+  start: "2021-01-01"
+  end:   "2021-12-31"
+
+climate:
+  sources:
+    pr:     chirps
+    tasmax: chirts
+    tasmin: chirts
+    rsds:   nasa_power   # or agera5 if CDS key available
+  ncores:             2
+  agera5_version:     "2_0"
+  reference_variable: pr
+
+soil:
+  variables: [clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500]
+  depths:    ["0-5", "5-15", "15-30", "30-60", "60-100"]
+  reference_variable: wv1500
+
+simulation:
+  country:      Honduras
+  country_code: HND
+  model:        dssat
+  working_path: D:/dssat_work
+  ncores:       2
+  max_pixels:   null
+
+crop:
+  name:     Maize
+  cultivar: IB1072
+
+management:
+  planting_date:        "2021-05-15"
+  n_planting_windows:   1
+  planting_window_days: 14
+  fertilizer_schedule:  []
+```
+
+</TabItem>
+<TabItem label="Claude Code">
+
+Complete the [Claude Code setup](../usage/claude-code/) first, then launch `claude` from inside the `skills/` folder.
+
+**Example request — with existing datacubes**
+
+```
+I want to run DSSAT for maize in Honduras. I already have the weather cube at
+D:/ag_cube_test/hnd_small/climate_raw/climate_hnd_small_2021_2021.nc and the soil
+cube at D:/ag_cube_test/hnd_small/soil_hnd_small.nc. Output to D:/results/yield_hnd.nc.
+Use cultivar IB1072 with planting date May 15 2021.
+```
+
+**Example request — full pipeline from scratch**
+
+```
+Simulate maize yield for a small area in Honduras, bbox [-87.5, 14.2, -87.2, 14.5],
+year 2021. Download climate from CHIRPS, CHIRTS, and NASA POWER (no CDS key).
+Output everything to D:/ag_cube_test/hnd_small.
+```
+
+**Worked example result (Honduras, Maize IB1072, 2021)**
+
+```
+pixels_ok      : 7
+pixels_skipped : 18
+pixels_failed  : 0
+mean HWAM      : 8782 kg/ha  (range: 8145–9787)
+```
+
+**Validating and running manually**
+
+```bash
+ag-cube-cm validate config.yaml
+ag-cube-cm run config.yaml
+```
+
+</TabItem>
+<TabItem label="Antigravity">
+
+Complete the [Antigravity setup](../usage/antigravity/) first, including the one-time system prompt.
+
+**Example request — with existing datacubes**
+
+```
+I want to run DSSAT for maize in Honduras. I already have the weather cube at
+D:/ag_cube_test/hnd_small/climate_raw/climate_hnd_small_2021_2021.nc and the soil
+cube at D:/ag_cube_test/hnd_small/soil_hnd_small.nc. Output to D:/results/yield_hnd.nc.
+Use cultivar IB1072 with planting date May 15 2021.
+```
+
+**Example request — full pipeline from scratch**
+
+```
+Simulate maize yield for a small area in Honduras, bbox [-87.5, 14.2, -87.2, 14.5],
+year 2021. Download climate from CHIRPS, CHIRTS, and NASA POWER (no CDS key).
+Output everything to D:/ag_cube_test/hnd_small.
+```
+
+The skill is registered for the Antigravity Science Skills bundle (`science_bundle: true`)
+and will be available directly from the Antigravity skill library once published.
+
+</TabItem>
+<TabItem label="Codex">
+
+Complete the [OpenAI Codex setup](../usage/codex/) first, including the one-time system prompt.
+
+**Example request — with existing datacubes**
+
+```
+I want to run DSSAT for maize in Honduras. I already have the weather cube at
+D:/ag_cube_test/hnd_small/climate_raw/climate_hnd_small_2021_2021.nc and the soil
+cube at D:/ag_cube_test/hnd_small/soil_hnd_small.nc. Output to D:/results/yield_hnd.nc.
+Use cultivar IB1072 with planting date May 15 2021.
+```
+
+**Example request — full pipeline from scratch**
+
+```
+Simulate maize yield for a small area in Honduras, bbox [-87.5, 14.2, -87.2, 14.5],
+year 2021. Download climate from CHIRPS, CHIRTS, and NASA POWER (no CDS key).
+Output everything to D:/ag_cube_test/hnd_small.
+```
+
+</TabItem>
+</Tabs>

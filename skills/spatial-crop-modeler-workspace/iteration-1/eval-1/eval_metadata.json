@@ -1,0 +1,13 @@
+{
+  "eval_id": 1,
+  "eval_name": "with-cubes-honduras-maize",
+  "prompt": "I want to run DSSAT for maize in a small area of Honduras. Bounding box is [-87.5, 14.2, -87.2, 14.5], year 2021. I already have the weather cube at D:/cubes/climate_hnd_2021.nc and the soil cube at D:/cubes/soil_hnd.nc. The output should go to D:/results/yield_hnd.nc. Use cultivar IB1072 with planting date May 15 2021.",
+  "assertions": [
+    {"text": "uses_with_cubes_mode: Config YAML contains mode: with_cubes"},
+    {"text": "correct_cultivar: Config contains cultivar IB1072"},
+    {"text": "correct_planting_date: Config contains planting_date 2021-05-15"},
+    {"text": "shows_validate_command: Response includes ag-cube-cm validate command"},
+    {"text": "shows_run_command: Response includes ag-cube-cm run command"},
+    {"text": "confirms_before_writing: Skill shows a plan and asks for confirmation before generating files"}
+  ]
+}

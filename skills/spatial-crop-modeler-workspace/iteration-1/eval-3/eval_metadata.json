@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "eval_name": "interpret-skipped-pixels-output",
+  "prompt": "My DSSAT simulation finished but I'm confused by the output. It says: pixels_ok=12, pixels_skipped=45, pixels_failed=0, mean HWAM=6200 kg/ha. Why are so many pixels skipped? Is the result reliable?",
+  "assertions": [
+    {"text": "explains_edge_nan_cause: Response explains that skipped pixels come from coarser AgERA5 or SoilGrids grids not fully covering the CHIRPS extent"},
+    {"text": "distinguishes_skipped_vs_failed: Response clearly differentiates skipped (NaN data, expected) from failed (DSSAT error, concerning)"},
+    {"text": "addresses_reliability: Response confirms result is reliable since pixels_failed=0"},
+    {"text": "provides_inspection_code: Response includes Python/xarray code to inspect HWAM spatial coverage"}
+  ]
+}

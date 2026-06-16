@@ -1,0 +1,93 @@
+{
+  "skill_name": "spatial-crop-modeler",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I want to run DSSAT for maize in a small area of Honduras. Bounding box is [-87.5, 14.2, -87.2, 14.5], year 2021. I already have the weather cube at D:/cubes/climate_hnd_2021.nc and the soil cube at D:/cubes/soil_hnd.nc. The output should go to D:/results/yield_hnd.nc. Use cultivar IB1072 with planting date May 15 2021.",
+      "expected_output": "Skill asks to confirm plan, generates with_cubes YAML config, shows validate command, shows run command with ag-cube-cm CLI.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_with_cubes_mode",
+          "description": "Config YAML contains mode: with_cubes"
+        },
+        {
+          "name": "correct_cultivar",
+          "description": "Config contains cultivar IB1072"
+        },
+        {
+          "name": "correct_planting_date",
+          "description": "Config contains planting_date 2021-05-15"
+        },
+        {
+          "name": "shows_validate_command",
+          "description": "Response includes ag-cube-cm validate command"
+        },
+        {
+          "name": "shows_run_command",
+          "description": "Response includes ag-cube-cm run command"
+        },
+        {
+          "name": "confirms_before_writing",
+          "description": "Skill shows a plan and asks for confirmation before generating files"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need to simulate wheat yield for a region in Ethiopia (bbox: [37.0, 8.0, 38.0, 9.0]) from 2018 to 2020. I don't have any datacubes yet. Use spring wheat and planting date October 1. Download climate from CHIRPS and CHIRTS. For solar radiation, I don't have a CDS key so use NASA POWER instead. Output everything to E:/ethiopia_wheat.",
+      "expected_output": "Skill asks to confirm, generates full_pipeline YAML config with rsds source nasa_power, correct bbox/dates, IB1015 wheat cultivar (or clarifies cultivar), output to E:/ethiopia_wheat.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses_full_pipeline_mode",
+          "description": "Config YAML contains mode: full_pipeline"
+        },
+        {
+          "name": "nasa_power_for_rsds",
+          "description": "Config uses nasa_power source for rsds variable"
+        },
+        {
+          "name": "correct_bbox",
+          "description": "Config bbox is [37.0, 8.0, 38.0, 9.0]"
+        },
+        {
+          "name": "correct_date_range",
+          "description": "Config has start_date 2018-01-01 and end_date 2020-12-31"
+        },
+        {
+          "name": "wheat_crop",
+          "description": "Config crop name is Wheat"
+        },
+        {
+          "name": "no_spaces_in_working_path",
+          "description": "working_path in config contains no spaces"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "My DSSAT simulation finished but I'm confused by the output. It says: pixels_ok=12, pixels_skipped=45, pixels_failed=0, mean HWAM=6200 kg/ha. Why are so many pixels skipped? Is the result reliable?",
+      "expected_output": "Skill explains edge-pixel NaN issue from coarser AgERA5/SoilGrids grids, explains that skipped pixels are expected at grid edges and are not failures, provides code to inspect HWAM spatially and assess coverage, and confirms result is reliable given pixels_failed=0.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "explains_edge_nan_cause",
+          "description": "Response explains that skipped pixels come from coarser AgERA5 or SoilGrids grids not fully covering the CHIRPS extent"
+        },
+        {
+          "name": "distinguishes_skipped_vs_failed",
+          "description": "Response clearly differentiates skipped (NaN data, expected) from failed (DSSAT error, concerning)"
+        },
+        {
+          "name": "addresses_reliability",
+          "description": "Response confirms result is reliable since pixels_failed=0"
+        },
+        {
+          "name": "provides_inspection_code",
+          "description": "Response includes Python/xarray code to inspect HWAM spatial coverage"
+        }
+      ]
+    }
+  ]
+}
