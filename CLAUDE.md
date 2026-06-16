@@ -1,4 +1,4 @@
-# GeoAgri Skills — Claude Code Project Instructions
+# Climate Data Hub Skills — Claude Code Project Instructions
 
 ## Custom skills
 
@@ -15,6 +15,7 @@ in the skill files.
 | Download only (no visualization requested) | `skills/climate-data-download/SKILL.md` |
 | Process / clip / aggregate already-downloaded data | `skills/geospatial-cube-processor/SKILL.md` |
 | Plot / chart / notebook from existing data | `skills/notebook-plots/SKILL.md` |
+| Spatial crop modeling / run crop model over a region | `skills/spatial-crop-modeler/skill.md` |
 
 ### gcf-pipeline trigger phrases (read `skills/gcf-pipeline/SKILL.md` when any of these appear)
 

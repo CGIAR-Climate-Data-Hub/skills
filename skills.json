@@ -5,6 +5,8 @@
     "climate-data-download": "/skills/climate-data-download/skill.md",
     "geospatial-cube-processor": "/skills/geospatial-cube-processor/skill.md",
     "notebook-plots": "/skills/notebook-plots/skill.md",
-    "climate-dashboard": "/skills/climate-dashboard/skill.md"
+    "sciplot-skill": "/skills/sciplot-skill/skill.md",
+    "climate-dashboard": "/skills/climate-dashboard/skill.md",
+    "spatial-crop-modeler": "/skills/spatial-crop-modeler/skill.md"
   }
 }
