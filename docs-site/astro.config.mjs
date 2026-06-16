@@ -35,6 +35,7 @@ export default defineConfig({
             { label: 'Geospatial Cube Processor', slug: 'skills/geospatial-cube-processor' },
             { label: 'Notebook Plots', slug: 'skills/notebook-plots' },
             { label: 'Climate Dashboard', slug: 'skills/climate-dashboard' },
+            { label: 'Spatial Crop Modeler', slug: 'skills/spatial-crop-modeler' },
           ],
         },
         {
