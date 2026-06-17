@@ -245,3 +245,8 @@ def summarize_by_admin(
 - **NASA POWER variable names**: The downloaded NetCDF uses CF standard names, not the NASA POWER parameter codes. Reference variables by their CF name: `rsds` (solar radiation), `sfcWind` (wind speed), `tasmax`/`tasmin` (temperature), `hurs` (relative humidity), `pr` (precipitation). Using the parameter code (e.g. `ALLSKY_SFC_SW_DWN`) as a variable name will return a KeyError — always use the CF name.
 - **GADM rate limits**: If fetching many admin boundaries in a loop, encourage caching the GeoDataFrame rather than re-fetching per unit
 - **Memory**: For large Datasets, suggest `ds.chunk({"time": 12})` before clipping to enable Dask lazy evaluation
+
+
+---
+
+*Evaluation examples: [references/evals.json](references/evals.json)*

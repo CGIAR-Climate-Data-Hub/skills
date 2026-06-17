@@ -252,3 +252,8 @@ For fully offline use, pass `include_plotlyjs=True` (~3 MB self-contained).
 - Create the HTML dashboard at `{OUTPUT_FOLDER}/{country}_{variable}_{year}.html` (Step 4)
 - After both are written say: *"Open `{notebook_path}` and run all cells, or open `{html_path}` directly in a browser."*
 - Multiple variables → default to `dashboard`; offer individual charts if user prefers
+
+
+---
+
+*Evaluation examples: [references/evals.json](references/evals.json)*

@@ -264,13 +264,17 @@ mean HWAM      : X kg/ha
 
 ### Cultivar codes
 
-| Code   | Crop  | Description |
-|--------|-------|-------------|
-| IB1072 | Maize | Tropical maize (default for Central America / tropics) |
-| PC0002 | Maize | Temperate maize |
-| IB1015 | Wheat | Spring wheat |
-| IB1487 | Wheat | Winter wheat |
-| IB0001 | Bean  | Common bean / soybean |
+Wheat uses the **WHAPS048** (NWheat) module. WHCER cultivars (e.g. IB1487) are **not** compatible with the bundled binary and will cause rc=99 ("Crop code incompatible").
+
+| Code   | Crop  | Module   | Description |
+|--------|-------|----------|-------------|
+| IB1072 | Maize | MZCER048 | Tropical maize (default for Central America / tropics) |
+| PC0002 | Maize | MZCER048 | Temperate maize |
+| IB1015 | Wheat | WHAPS048 | MARIS FUNDIN — standard winter wheat reference |
+| IB0001 | Wheat | WHAPS048 | YECORA — spring / mild-winter wheat |
+| IB0002 | Wheat | WHAPS048 | ARMINDA — strong winter wheat (high vernalization sensitivity) |
+| IB1500 | Wheat | WHAPS048 | MANITOU — winter wheat |
+| IB0001 | Bean  | CRGRO048 | Common bean / soybean |
 
 ### Climate sources
 
@@ -294,7 +298,55 @@ key: <your-uid>:<your-api-key>
 ```
 clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500
 ```
-Depths: `0-5`, `5-15`, `15-30`, `30-60`, `60-100` cm
+Depths: `0-5`, `5-15`, `15-30`, `60-100` cm
+
+#### Soil cube creation — always pass the correct native CRS
+
+SoilGrids files use **Interrupted Goode Homolosine** projection. The `SoilDataCubeBuilder` default `crs="ESRI:54052"` is wrong and produces a cube with bad geographic extents. Always pass the CRS explicitly:
+
+```python
+from aggeodata.transform.soil_cube import SoilDataCubeBuilder
+
+IGH = "+proj=igh +lat_0=0 +lon_0=0 +datum=WGS84 +units=m +no_defs"
+
+builder = SoilDataCubeBuilder(
+    data_folder="D:/data/<country>/soil_raw",
+    variables=["clay", "sand", "silt", "bdod", "cfvo", "soc", "phh2o", "wv0010", "wv0033", "wv1500"],
+    reference_variable="wv1500",
+    crs=IGH,               # ← always explicit
+    target_crs="EPSG:4326",
+)
+builder.build_and_save(output_path="D:/data/<country>", filename="soil_<country>.nc")
+```
+
+#### Soil cube validation — run before every simulation
+
+After building (or receiving) a soil cube, always validate it before passing to `ag-cube-cm`:
+
+```python
+import xarray as xr
+
+soil = xr.open_dataset("soil_<country>.nc")
+
+# 1. Flat format check — old pipelines store one variable per depth
+flat_vars = [v for v in soil.data_vars if "_cm_mean" in v]
+if flat_vars:
+    from aggeodata.transform.soil_cube import reshape_flat_soil_cube
+    soil = reshape_flat_soil_cube(soil)
+    soil.to_netcdf("soil_<country>.nc")   # overwrite with fixed version
+
+# 2. CRS check — coordinates must be in degrees, not projected meters
+assert abs(float(soil.y.min())) < 90,  "Soil y looks projected (metres). Rebuild with target_crs='EPSG:4326'."
+assert abs(float(soil.x.min())) < 180, "Soil x looks projected (metres). Rebuild with target_crs='EPSG:4326'."
+
+# 3. Extent overlap with weather
+weather = xr.open_dataset("climate_<country>.nc")
+assert float(soil.y.min()) <= float(weather.y.max()), "Soil and weather extents don't overlap on Y axis."
+assert float(soil.x.min()) <= float(weather.x.max()), "Soil and weather extents don't overlap on X axis."
+print("Soil cube OK")
+```
+
+If any assertion fails, **stop and fix before running the simulation** — all pixels will either fail or skip if the soil cube is wrong.
 
 ---
 
@@ -303,6 +355,9 @@ Depths: `0-5`, `5-15`, `15-30`, `30-60`, `60-100` cm
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | All pixels skipped | Grid edges have NaN from coarser AgERA5/SoilGrids | Expected — increase `max_pixels` or check interior pixels |
+| All pixels skipped: soil slice is all NaN | Soil cube coordinates are in projected metres, not degrees — `sel(y,x)` lands outside the data | Rebuild soil cube with `crs='+proj=igh ...'` and `target_crs='EPSG:4326'` (see Soil cube creation above) |
+| All pixels skipped: `no valid index for a 0-dimensional object` | Soil cube is in flat format (`clay_0-5cm_mean`) — needs reshaping | Run `reshape_flat_soil_cube(ds).to_netcdf(...)` then re-run simulation |
+| `DSSAT finished without Summary.OUT (rc=99): Crop code incompatible` | Cultivar belongs to WHCER model but bundled binary is WHAPS048 | Use a WHAPS048 cultivar: IB1015, IB0001, IB0002, or IB1500 for wheat |
 | `DSSAT path not found` | DSSAT not installed or `dssat_path` wrong | Set `dssat_path` in config or ensure DSSAT is on PATH |
 | `UnicodeEncodeError` | Non-ASCII chars in output path on Windows | Use ASCII-only paths |
 | `ModuleNotFoundError: mcp` | mcp package not installed | `pip install mcp` |
@@ -319,3 +374,8 @@ Depths: `0-5`, `5-15`, `15-30`, `30-60`, `60-100` cm
 - Always report the final pixel summary (ok/skipped/failed) and mean HWAM
 - If pixels_failed > 5% of (ok + failed), investigate and suggest next steps
 - Offer a quick matplotlib yield map at the end
+
+
+---
+
+*Evaluation examples: [references/evals.json](references/evals.json)*

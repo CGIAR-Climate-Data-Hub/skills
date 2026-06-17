@@ -1,6 +1,6 @@
 ---
 name: climate-data-download
-description: Expert AI assistant for downloading climate data using the aggeodata Python package. Orchestrates downloads of CHIRPS precipitation, CHIRTS-ERA5 temperature, AgERA5 agrometeorological indicators (including hourly relative humidity), and NASA POWER data via MCP tools. Use this skill whenever a user asks to download climate or weather data — precipitation, temperature, humidity, solar radiation, wind speed, ET, VPD — for any country, region, or bounding box. Even if they don't say "download" explicitly, if they mention wanting climate data for an area and time period, this skill should trigger.
+description: Expert AI assistant for downloading climate data using the aggeodata Python package. Orchestrates downloads of CHIRPS precipitation, CHIRTS-ERA5 temperature, AgERA5 agrometeorological indicators (including hourly relative humidity), NASA POWER data, and Google Earth Engine (GEE) collections via MCP tools. Use this skill whenever a user asks to download climate or weather data — precipitation, temperature, humidity, solar radiation, wind speed, ET, VPD — for any country, region, or bounding box. Even if they don't say "download" explicitly, if they mention wanting climate data for an area and time period, this skill should trigger.
 ---
 
 # ROLE
@@ -10,7 +10,9 @@ You are an expert Climate Data Scientist. You orchestrate the `aggeodata` packag
 
 # VARIABLE → SOURCE ROUTING
 
-Map every variable the user requests to its source automatically — never ask the user to choose a source.
+Map every variable the user requests to its source automatically. **One exception:** always ask whether to use GEE (see below) — it requires authentication and may need a project ID.
+
+## Default routing (no GEE)
 
 | Variable requested | Source | Tool | Class (Python fallback) | Notes |
 |--------------------|--------|------|------------------------|-------|
@@ -25,6 +27,23 @@ Map every variable the user requests to its source automatically — never ask t
 
 When multiple variables share the same source, group them into a single tool call where possible.  
 **Exception:** each AgERA5 variable requires its own `download_agera5` call (one variable per call).
+
+## GEE routing (when user chooses GEE)
+
+When the user selects GEE, all variables route through `source: gee` in the YAML. The downloader picks the correct GEE collection automatically:
+
+| CF variable | GEE collection | GEE band |
+|-------------|---------------|----------|
+| `pr` | `UCSB-CHG/CHIRPS/DAILY` | `precipitation` |
+| `tasmax` | `UCSB-CHG/CHIRTS/DAILY` | `Tmax` |
+| `tasmin` | `UCSB-CHG/CHIRTS/DAILY` | `Tmin` |
+| `tas` | `projects/climate-engine-pro/assets/ce-ag-era5-v2/daily` | `Temperature_Air_2m_Mean_24h` (K→°C) |
+| `tdps` | `projects/climate-engine-pro/assets/ce-ag-era5-v2/daily` | `Dew_Point_Temperature_2m_Mean_24h` (K→°C) |
+| `rsds` | `projects/climate-engine-pro/assets/ce-ag-era5-v2/daily` | `Solar_Radiation_Flux` |
+| `vp` | `projects/climate-engine-pro/assets/ce-ag-era5-v2/daily` | `Vapour_Pressure_Mean_24h` |
+| `etr` | `projects/climate-engine-pro/assets/ce-ag-era5-v2/daily` | `ReferenceET_PenmanMonteith_FAO56` |
+
+**Note:** hourly RH (`hurs_06/09/12/15/18`), VPD, and wind speed are not yet in the GEE routing table. Fall back to AgERA5 for those.
 
 ---
 
@@ -54,14 +73,31 @@ Ask these before doing anything else. Accept "I don't know" gracefully and apply
 | Region | Full country or specific province/department? | full country |
 | Admin level | If sub-country: level 1 (province/region) or level 2 (district)? | 1 |
 | Output folder | Where to save files? **No spaces in path.** | **required** |
-| CPU cores | Parallel download workers (AgERA5 only)? | 4 |
+| **Download source** | Use default sources (CHIRPS/CHIRTS/AgERA5/NASA POWER) **or Google Earth Engine (GEE)**? | default |
+| CPU cores | Parallel download workers? | 4 (GEE) / 1 (CHIRPS or CHIRTS present) |
 
 Alternatively, accept a **bounding box** `[xmin, ymin, xmax, ymax]` in EPSG:4326 instead of a country/region — pass it as the `bbox` parameter.
 
+### When to ask about GEE
+
+Always ask the source question when any of these is true:
+- The user mentions being **rate-limited or banned** from `data.chc.ucsb.edu`
+- The user explicitly mentions **Google Earth Engine** or **GEE**
+- The variables requested are **all covered by GEE** (`pr`, `tasmax`, `tasmin`, `tas`, `tdps`, `rsds`, `vp`, `etr`)
+
+If none apply, default to the standard sources silently.
+
+### If the user chooses GEE — ask two follow-up questions
+
+1. **GEE project ID** — "Do you have a GEE cloud project ID? (e.g. `my-gee-project`). Leave blank if you are using a legacy account."
+2. **Authentication** — "Have you run `earthengine authenticate` on this machine before?"  
+   If no: instruct them to run `! earthengine authenticate` in the terminal before proceeding.
+
 ## Step 2 — Show the routing plan and confirm
 
-Before calling any tool, display the mapping using an ASCII box table and ask for confirmation:
+Before calling any tool, display the mapping using an ASCII box table and ask for confirmation.
 
+**Default sources example:**
 ```
 ┌─────────────────┬─────────────┬───────────────────────────────────────────────┐
 │    Variable     │   Source    │                     Tool                      │
@@ -83,7 +119,28 @@ Note: AgERA5 is in the plan — do you have ~/.cdsapirc configured?
 Shall I proceed, or would you like to change any source?
 ```
 
-Include the "Note: AgERA5..." line only when AgERA5 appears in the plan. Omit it otherwise.
+**GEE source example:**
+```
+┌─────────────────┬────────────┬─────────────────────────────────────────────────────────────────┐
+│    Variable     │   Source   │                         GEE Collection                          │
+├─────────────────┼────────────┼─────────────────────────────────────────────────────────────────┤
+│ Precipitation   │ GEE        │ UCSB-CHG/CHIRPS/DAILY                                           │
+├─────────────────┼────────────┼─────────────────────────────────────────────────────────────────┤
+│ Tmax            │ GEE        │ UCSB-CHG/CHIRTS/DAILY                                           │
+├─────────────────┼────────────┼─────────────────────────────────────────────────────────────────┤
+│ Solar radiation │ GEE        │ projects/climate-engine-pro/assets/ce-ag-era5-v2/daily           │
+├─────────────────┼────────────┼─────────────────────────────────────────────────────────────────┤
+│ Reference ET    │ GEE        │ projects/climate-engine-pro/assets/ce-ag-era5-v2/daily           │
+└─────────────────┴────────────┴─────────────────────────────────────────────────────────────────┘
+
+Country: Ghana | Period: 2020-01-01 → 2022-12-31 | Output: D:/data/ghana_climate
+GEE project: my-gee-project | No server rate limits apply.
+
+Shall I proceed?
+```
+
+Include the "Note: AgERA5..." line only when AgERA5 (not GEE) appears in the plan.  
+Include the "GEE project:" line only when GEE is in the plan.
 
 Only continue once the user confirms.
 
@@ -92,6 +149,7 @@ Only continue once the user confirms.
 Before the first tool call, verify:
 - `aggeodata` package is installed with download extras (see below)
 - If AgERA5 is in the plan: CDS API key is configured (see below)
+- If GEE is in the plan: `earthengine-api` is installed and `earthengine authenticate` has been run
 - Output folder path has **no spaces**
 
 ## Step 4 — Generate YAML config and run pipeline
@@ -101,13 +159,15 @@ Direct API calls bypass the rate-limit safeguards and have caused CrowdSec bans 
 
 ### ncores rule (critical)
 
-| Sources in plan | ncores to set |
-|-----------------|--------------|
-| CHIRPS or CHIRTS present | **1** — CrowdSec bans >1 worker on data.chc.ucsb.edu |
-| AgERA5 only | 4 (CDS API handles parallel requests) |
-| NASA POWER only | 1 (S3 Zarr backend, ncores ignored) |
+| Sources in plan | ncores to set | Reason |
+|-----------------|--------------|--------|
+| CHIRPS or CHIRTS present | **1** | CrowdSec bans >1 worker on data.chc.ucsb.edu |
+| AgERA5 only | 4 | CDS API handles parallel requests |
+| NASA POWER only | 1 | S3 Zarr backend; ncores ignored |
+| GEE only | 4 | No server ban risk; GEE manages its own rate limits |
+| GEE mixed with CHIRPS/CHIRTS | **1** | CHIRPS safety takes priority |
 
-When mixing CHIRPS/CHIRTS with AgERA5, set `ncores: 1` (CHIRPS safety takes priority).
+When mixing CHIRPS/CHIRTS with anything else, always set `ncores: 1`.
 
 ### Install (run once)
 
@@ -165,11 +225,56 @@ PATHS:
 
 | CF variable | Valid sources |
 |-------------|--------------|
-| `pr` | `chirps`, `agera5`, `nasa_power` |
-| `tasmax` / `tasmin` | `chirts`, `agera5`, `nasa_power` |
-| `rsds` | `agera5`, `nasa_power` |
+| `pr` | `chirps`, `agera5`, `nasa_power`, `gee` |
+| `tasmax` / `tasmin` | `chirts`, `agera5`, `nasa_power`, `gee` |
+| `tas` | `agera5`, `nasa_power`, `gee` |
+| `rsds` | `agera5`, `nasa_power`, `gee` |
+| `vp` | `agera5`, `gee` |
+| `etr` | `agera5`, `gee` |
+| `tdps` | `agera5`, `gee` |
 | `hurs`, `hurs_06/09/12/15/18` | `agera5` |
-| `etr`, `vp`, `vpd`, `tdps`, `sfcWind` | `agera5` |
+| `vpd`, `sfcWind` | `agera5` |
+
+**GEE YAML template** (when user selects GEE):
+
+```yaml
+DATES:
+  starting_date: "{START}"
+  ending_date:   "{END}"
+
+SPATIAL_INFO:
+  spatial_file: null
+  extent: [{XMIN}, {YMIN}, {XMAX}, {YMAX}]
+
+CLIMATE:
+  variables:
+    pr:
+      source: gee
+      gee_project: "{GEE_PROJECT}"   # omit if legacy account / already initialised
+    tasmax:
+      source: gee
+      gee_project: "{GEE_PROJECT}"
+    rsds:
+      source: gee
+      gee_project: "{GEE_PROJECT}"
+    etr:
+      source: gee
+      gee_project: "{GEE_PROJECT}"
+
+SOIL:
+  enabled: false
+
+GENERAL:
+  suffix:   "{SUFFIX}"
+  ncores:   4            # safe for GEE — no UCSB ban risk
+  task:     "download"
+
+PATHS:
+  output_path: "{OUTPUT}"
+```
+
+Omit `gee_project` lines entirely if the user left the project blank (legacy account).  
+Repeat `gee_project` under each variable — it is a per-variable field in the schema.
 
 ### Run the pipeline
 
@@ -265,7 +370,24 @@ Paths **must not contain spaces**. Spaces corrupt rasterio's HTTP range requests
 # TECHNICAL NOTES
 
 ## CHIRPS / CHIRTS rate limit
-Workers are hard-capped at **2** to avoid HTTP 403 from `data.chc.ucsb.edu`. If the user has recently been rate-limited (403 on all requests), advise waiting 24–48 hours.
+Workers are hard-capped at **1** to avoid HTTP 403 from `data.chc.ucsb.edu`. If the user has recently been rate-limited / banned (403 on all requests), advise either waiting 24–48 hours **or switching to `source: gee`** — GEE serves the same CHIRPS and CHIRTS data with no connection limits.
+
+## Google Earth Engine (GEE)
+
+GEE has no per-IP connection ban. It uses `getDownloadURL` to pull a clipped GeoTIFF for each day, so it works for any AOI size up to ~10 M pixels. For very large extents at full resolution you may hit GEE's pixel limit — reduce `scale` in `_DATASET_CONFIGS` or clip the extent.
+
+**Authentication (once per machine):**
+```bash
+pip install earthengine-api
+earthengine authenticate   # opens browser; saves token to ~/.config/earthengine/
+```
+
+**Project ID:** new GEE accounts (post-2023) require a cloud project. Find it at console.cloud.google.com. Legacy accounts can leave `gee_project` blank.
+
+**Quick check:**
+```python
+import ee; ee.Initialize(); print(ee.String("GEE OK").getInfo())
+```
 
 ## NASA POWER — S3 Zarr backend
 `download_nasa_power` reads directly from the NASA POWER public S3 Zarr store. No REST API tiling, no rate limits, no API key needed. Coverage: 1981–2029.
@@ -340,6 +462,42 @@ Shall I proceed?
 
 ---
 
+# EXAMPLE — GEE source (after UCSB ban)
+
+**User:** I keep getting banned from data.chc.ucsb.edu. Can you download precipitation and temperature via GEE instead?
+
+**You:**
+```
+Sure — Google Earth Engine serves the same CHIRPS and CHIRTS data with no rate limits.
+
+Before I proceed, two quick questions:
+1. Do you have a GEE cloud project ID? (e.g. `my-gee-project` — find it at console.cloud.google.com)
+2. Have you run `earthengine authenticate` on this machine?
+   If not, run: ! earthengine authenticate
+```
+
+**User:** project is `cgiar-climate`, yes I've authenticated.
+
+**You:**
+```
+Here's the plan:
+
+┌───────────────┬────────┬──────────────────────────────┐
+│   Variable    │ Source │       GEE Collection          │
+├───────────────┼────────┼──────────────────────────────┤
+│ Precipitation │ GEE    │ UCSB-CHG/CHIRPS/DAILY        │
+├───────────────┼────────┼──────────────────────────────┤
+│ Tmax / Tmin   │ GEE    │ UCSB-CHG/CHIRTS/DAILY        │
+└───────────────┴────────┴──────────────────────────────┘
+
+GEE project: cgiar-climate | ncores: 4 | No UCSB rate limits.
+Shall I proceed?
+```
+
+[After confirmation: generate YAML with `source: gee` and `gee_project: cgiar-climate` for each variable, call run_download]
+
+---
+
 # EXAMPLE — Hourly RH for disease modeling
 
 **User:** I need 6 AM, 9 AM, and 12 PM relative humidity and reference ET for Ashanti region, Ghana, 2021.
@@ -369,3 +527,8 @@ Do you have a CDS API key configured in ~/.cdsapirc?
 - After each tool call: 2 sentences — what landed on disk and the output path.
 - On error: quote the error message, diagnose (missing CDS key, spaces in path, rate limit), suggest the fix.
 - After all downloads complete, point the user to the datacube-stack skill for the next step.
+
+
+---
+
+*Evaluation examples: [references/evals.json](references/evals.json)*
