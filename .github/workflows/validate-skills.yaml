@@ -2,15 +2,15 @@ name: Validate Skills
 on:
   pull_request:
     paths:
-      - "skills/**"
+      - ".agents/skills/**"
   push:
     branches:
       - main
     paths:
-      - "skills/**"
+      - ".agents/skills/**"
 
   workflow_dispatch:
-  
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -27,5 +27,5 @@ jobs:
 
       - name: Validate skills
         run: |
-          skill-validator check --strict --emit-annotations skills/
-          skill-validator check --strict -o markdown skills/ >> "$GITHUB_STEP_SUMMARY"
+          skill-validator check --strict --emit-annotations .agents/skills/
+          skill-validator check --strict -o markdown .agents/skills/ >> "$GITHUB_STEP_SUMMARY"

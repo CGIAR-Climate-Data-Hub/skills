@@ -128,7 +128,7 @@ Before planning or executing anything, use read_url_content to fetch ALL five sk
 Fetch all five BEFORE reading any of them. Treat gcf-pipeline as the controlling workflow.
 
 Important Execution Rules:
-- Translate all MCP tool calls from the colon format in the files (e.g., aggeodata:download_chirps) to the Antigravity slash format (e.g., aggeodata/download_chirps).
+- Translate all MCP tool calls from the colon format in the files (e.g., aggeodata:download_chirps, ag_cube_cm:run_simulation) to the Antigravity slash format (e.g., aggeodata/download_chirps, ag_cube_cm/run_simulation).
 - Do NOT re-fetch sub-skill files mid-task — they are already loaded.
 - Do NOT run environment or folder existence checks before starting.
 - Do NOT inspect the aggeodata package with inspect() or dir() — all API patterns are in the skill files.

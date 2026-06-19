@@ -27,9 +27,9 @@ breaks `xarray`, `importlib.metadata`, and most other packages. Name temp script
 `check_nc.py`, `run_pipeline.py`, `process.py`, etc.
 
 **Sub-skill paths** (relative to the project root):
-- Download: `skills/climate-data-download/SKILL.md`
-- Process:  `skills/geospatial-cube-processor/SKILL.md`
-- Visualize: `skills/notebook-plots/SKILL.md`
+- Download: `.agents/skills/climate-data-download/SKILL.md`
+- Process:  `.agents/skills/geospatial-cube-processor/SKILL.md`
+- Visualize: `.agents/skills/notebook-plots/SKILL.md`
 
 ---
 
@@ -92,7 +92,7 @@ State any defaults you applied so the user can correct them.
 
 ## Stage 3 — Download (delegate to climate-data-download)
 
-> **Read** `skills/climate-data-download/SKILL.md`.
+> **Read** `.agents/skills/climate-data-download/SKILL.md`.
 >
 > Follow its variable → source routing table and download code blocks to fetch all
 > requested variables. Use the parameters collected in Stage 1 (country/bbox, dates,
@@ -108,7 +108,7 @@ State any defaults you applied so the user can correct them.
 
 ## Stage 4 — Process (delegate to geospatial-cube-processor)
 
-> **Read** `skills/geospatial-cube-processor/SKILL.md`.
+> **Read** `.agents/skills/geospatial-cube-processor/SKILL.md`.
 >
 > Use the `mask_to_admin` and `summarize_by_admin` function implementations from that
 > skill. Execute them via Bash Python (do not write them to the user's file — run
@@ -127,7 +127,7 @@ Run both sub-skills in sequence using the CSV from Stage 4.
 
 ### 5a — Jupyter notebook (delegate to notebook-plots)
 
-> **Read** `skills/notebook-plots/SKILL.md`.
+> **Read** `.agents/skills/notebook-plots/SKILL.md`.
 >
 > Before writing the notebook, ensure `nbformat` and `plotly` are installed:
 > ```python
@@ -142,7 +142,7 @@ Run both sub-skills in sequence using the CSV from Stage 4.
 
 ### 5b — Climate dashboard (delegate to climate-dashboard)
 
-> **Read** `skills/climate-dashboard/SKILL.md`.
+> **Read** `.agents/skills/climate-dashboard/SKILL.md`.
 >
 > Follow its instructions to build a Chart.js HTML dashboard at
 > `{OUTPUT_FOLDER}/{country}_{variables}_{year_range}.html`.
