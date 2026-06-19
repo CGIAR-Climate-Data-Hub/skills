@@ -7,7 +7,6 @@ __pycache__/
 *.egg-info/
 .dist/
 build/
-.agents/
 .claude/skills/geospatial-cube-processor-workspace/
 .claude/skills/notebook-plots-workspace/
 climate-data-download-workspace/

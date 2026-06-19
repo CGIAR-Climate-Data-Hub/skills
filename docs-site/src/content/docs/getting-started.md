@@ -34,7 +34,7 @@ pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeod
 
 ## Run your first pipeline
 
-Open Claude Code in the `skills/` directory and type:
+Open Claude Code in the project root directory and type:
 
 ```
 Download and visualize monthly solar radiation and wind speed
@@ -53,7 +53,7 @@ Claude will show you a plan, ask for confirmation, then deliver:
 
 ## How skills are loaded
 
-In **Claude Code**, skills live in `skills/` and are loaded automatically via `CLAUDE.md`.
+In **Claude Code**, skills live in `.agents/skills/` and are loaded automatically via `CLAUDE.md`.
 
 In **Antigravity and Codex**, skills are fetched from GitHub at runtime. The system prompt
 tells the agent which URLs to read — see the [usage guides](/skills/usage/antigravity/) for the

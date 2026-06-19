@@ -16,14 +16,14 @@ Map every variable the user requests to its source automatically. **One exceptio
 
 | Variable requested | Source | Tool | Class (Python fallback) | Notes |
 |--------------------|--------|------|------------------------|-------|
-| Precipitation / rainfall | **CHIRPS** | `download_chirps` | `CHIRPSDownloader` | Daily 0.05°, 1981–present |
-| Temperature (Tmax / Tmin) | **CHIRTS-ERA5** | `download_chirts` | `CHIRTSDownloader` | Daily 0.05°, 1983–present |
-| Solar radiation, RH, wind speed, temperature | **NASA POWER** | `download_nasa_power` | `NASAPowerDownloader` | Handles any parameter code; routes to S3 or REST automatically |
-| Hourly RH (06/09/12/15/18 UTC) | **AgERA5** | `download_agera5` | `AgEra5Downloader` | CDS key required; vars: `relative_humidity_06/09/12/15/18` |
-| Vapour pressure | **AgERA5** | `download_agera5` | `AgEra5Downloader` | CDS key required; var: `vapour_pressure` |
-| Vapour pressure deficit | **AgERA5** | `download_agera5` | `AgEra5Downloader` | CDS key required; var: `vapour_pressure_defficit` |
-| Reference ET | **AgERA5** | `download_agera5` | `AgEra5Downloader` | CDS key required; var: `reference_evapotranspiration` |
-| Dew point | **AgERA5** | `download_agera5` | `AgEra5Downloader` | CDS key required; var: `dew_point_temperature` |
+| Precipitation / rainfall | **CHIRPS** | `aggeodata/download_chirps` | `CHIRPSDownloader` | Daily 0.05°, 1981–present |
+| Temperature (Tmax / Tmin) | **CHIRTS-ERA5** | `aggeodata/download_chirts` | `CHIRTSDownloader` | Daily 0.05°, 1983–present |
+| Solar radiation, RH, wind speed, temperature | **NASA POWER** | `aggeodata/download_nasa_power` | `NASAPowerDownloader` | Handles any parameter code; routes to S3 or REST automatically |
+| Hourly RH (06/09/12/15/18 UTC) | **AgERA5** | `aggeodata/download_agera5` | `AgEra5Downloader` | CDS key required; vars: `relative_humidity_06/09/12/15/18` |
+| Vapour pressure | **AgERA5** | `aggeodata/download_agera5` | `AgEra5Downloader` | CDS key required; var: `vapour_pressure` |
+| Vapour pressure deficit | **AgERA5** | `aggeodata/download_agera5` | `AgEra5Downloader` | CDS key required; var: `vapour_pressure_defficit` |
+| Reference ET | **AgERA5** | `aggeodata/download_agera5` | `AgEra5Downloader` | CDS key required; var: `reference_evapotranspiration` |
+| Dew point | **AgERA5** | `aggeodata/download_agera5` | `AgEra5Downloader` | CDS key required; var: `dew_point_temperature` |
 
 When multiple variables share the same source, group them into a single tool call where possible.  
 **Exception:** each AgERA5 variable requires its own `download_agera5` call (one variable per call).
@@ -49,13 +49,15 @@ When the user selects GEE, all variables route through `source: gee` in the YAML
 
 # MCP TOOLS AVAILABLE
 
+These tools are exposed by the `aggeodata` MCP server:
+
 | Tool | What it does |
 |------|-------------|
-| `aggeodata:list_admin_units` | Lists province/district names for a country |
-| `aggeodata:download_chirps` | Downloads CHIRPS daily precipitation → clipped NetCDF |
-| `aggeodata:download_chirts` | Downloads CHIRTS-ERA5 daily Tmax/Tmin → clipped NetCDF |
-| `aggeodata:download_agera5` | Downloads one AgERA5 variable via CDS API → clipped NetCDF |
-| `aggeodata:download_nasa_power` | Downloads NASA POWER via S3 Zarr → clipped NetCDF (fast, no rate limits) |
+| `aggeodata/list_admin_units` | Lists province/district names for a country |
+| `aggeodata/download_chirps` | Downloads CHIRPS daily precipitation → clipped NetCDF |
+| `aggeodata/download_chirts` | Downloads CHIRTS-ERA5 daily Tmax/Tmin → clipped NetCDF |
+| `aggeodata/download_agera5` | Downloads one AgERA5 variable via CDS API → clipped NetCDF |
+| `aggeodata/download_nasa_power` | Downloads NASA POWER via S3 Zarr → clipped NetCDF (fast, no rate limits) |
 
 ---
 
@@ -177,6 +179,8 @@ pip install "aggeodata[download] @ git+https://github.com/anaguilarar/aggeodata.
 
 ### Resolve country → extent (skip if bbox given)
 
+Use the `run_command` tool to run python or write a temporary script to execute this:
+
 ```python
 from aggeodata.ingestion.boundaries import _fetch_geojson_cached
 gdf = _fetch_geojson_cached("{ISO3}", 0)
@@ -186,7 +190,7 @@ extent = [round(v, 4) for v in gdf.total_bounds.tolist()]
 
 ### Generate the YAML config
 
-Build the config file from the confirmed plan. Use CF variable names as keys under `CLIMATE.variables`.
+Build the config file from the confirmed plan. Use CF variable names as keys under `CLIMATE.variables`. Write the configuration to file using `write_to_file`.
 
 ```yaml
 DATES:
@@ -278,12 +282,14 @@ Repeat `gee_project` under each variable — it is a per-variable field in the s
 
 ### Run the pipeline
 
+Execute this using python via `run_command`:
+
 ```python
 from aggeodata.pipelines.download import run_download
 results = run_download("{OUTPUT}/config.yaml")
 ```
 
-Or from the command line:
+Or from the command line using `run_command`:
 ```bash
 python -m aggeodata.pipelines.download {OUTPUT}/config.yaml
 ```
@@ -458,7 +464,7 @@ Shall I proceed?
 
 **User:** yes
 
-**You:** [calls download_chirps, reports result, calls download_chirts, reports result, shows final summary table]
+**You:** [calls aggeodata/download_chirps, reports result, calls aggeodata/download_chirts, reports result, shows final summary table]
 
 ---
 
@@ -518,7 +524,7 @@ Country: Ghana | Region: Ashanti (admin level 1) | Period: 2021-01-01 → 2021-1
 Do you have a CDS API key configured in ~/.cdsapirc?
 ```
 
-[After confirmation: call list_admin_units to verify "Ashanti", then four sequential download_agera5 calls]
+[After confirmation: call aggeodata/list_admin_units to verify "Ashanti", then four sequential download_agera5 calls]
 
 ---
 
@@ -527,8 +533,3 @@ Do you have a CDS API key configured in ~/.cdsapirc?
 - After each tool call: 2 sentences — what landed on disk and the output path.
 - On error: quote the error message, diagnose (missing CDS key, spaces in path, rate limit), suggest the fix.
 - After all downloads complete, point the user to the datacube-stack skill for the next step.
-
-
----
-
-*Evaluation examples: [references/evals.json](references/evals.json)*

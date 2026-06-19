@@ -38,19 +38,19 @@ When the user gives you a climate data task, use the CDH climate pipeline skills
 Before planning or executing anything, fetch and read ALL of these skill files:
 
 1. Main pipeline orchestrator:
-   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/gcf-pipeline/skill.md
+   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/gcf-pipeline/SKILL.md
 
 2. Data download sub-skill:
-   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-data-download/SKILL.md
+   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-data-download/SKILL.md
 
 3. Geospatial processing sub-skill:
-   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/geospatial-cube-processor/SKILL.md
+   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/geospatial-cube-processor/SKILL.md
 
 4. Notebook plotting sub-skill:
-   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/notebook-plots/SKILL.md
+   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/notebook-plots/SKILL.md
 
 5. Dashboard sub-skill:
-   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-dashboard/SKILL.md
+   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-dashboard/SKILL.md
 
 Treat the gcf-pipeline file as the controlling workflow. Treat the other four as delegated
 sub-skills referenced by that workflow.

@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "aggeodata": {
+      "command": "python",
+      "args": [
+        "-m",
+        "aggeodata.mcp_server"
+      ],
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/../aggeodata/src"
+      }
+    },
+    "ag_cube_cm": {
+      "command": "python",
+      "args": [
+        "-m",
+        "ag_cube_cm.mcp_server"
+      ],
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/../ag_cube_cm/src"
+      }
+    }
+  }
+}

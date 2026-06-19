@@ -36,18 +36,20 @@ When the user gives you a climate data task, use the CDH climate pipeline skills
 
 Before planning or executing anything, use read_url_content to fetch ALL five skill files now:
 
-1. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/gcf-pipeline/skill.md
-2. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-data-download/SKILL.md
-3. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/geospatial-cube-processor/SKILL.md
-4. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/notebook-plots/SKILL.md
-5. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/skills/climate-dashboard/SKILL.md
+1. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/gcf-pipeline/SKILL.md
+2. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-data-download/SKILL.md
+3. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/geospatial-cube-processor/SKILL.md
+4. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/notebook-plots/SKILL.md
+5. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-dashboard/SKILL.md
 
 Fetch all five BEFORE reading any of them. Treat gcf-pipeline as the controlling workflow.
 
-Do NOT re-fetch sub-skill files mid-task — they are already loaded.
-Do NOT run environment or folder existence checks before starting.
-Do NOT inspect the aggeodata package with inspect() or dir() — all API patterns are in the skill files.
-Execute all generated code using run_command.
+Important Execution Rules:
+- Translate all MCP tool calls from the colon format in the files (e.g., aggeodata:download_chirps) to the Antigravity slash format (e.g., aggeodata/download_chirps).
+- Do NOT re-fetch sub-skill files mid-task — they are already loaded.
+- Do NOT run environment or folder existence checks before starting.
+- Do NOT inspect the aggeodata package with inspect() or dir() — all API patterns are in the skill files.
+- Execute all generated code using run_command.
 ```
 
 > **Why pre-fetch all five?** Fetching sub-skills on demand (mid-task) adds a round-trip

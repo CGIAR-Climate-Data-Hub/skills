@@ -117,7 +117,7 @@ Before writing any files, show a concise plan:
 Mode          : full_pipeline
 Area          : [-87.5, 14.2, -87.2, 14.5]  (~0.3 x 0.3 deg)
 Period        : 2021-01-01 to 2021-12-31
-Climate       : CHIRPS (pr) + CHIRTS (tasmax/tasmin) + AgERA5 (rsds)
+Climate       : CHIRPS (pr) + CHIRTS (tasmax/tasmin) + AgERA5 (rsds)  ← or gee for any variable
 Soil          : SoilGrids (clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500)
 Crop          : Maize, cultivar IB1072
 Planting      : 2021-05-15, 1 window
@@ -178,11 +178,16 @@ dates:
 
 climate:
   sources:
-    pr:     chirps     # precipitation (0.05 deg, no API key)
-    tasmax: chirts     # max temperature (0.05 deg, no API key)
-    tasmin: chirts     # min temperature
-    rsds:   agera5     # solar radiation — CDS key required (~/.cdsapirc)
-    # rsds: nasa_power # alternative: no API key, 0.5 deg resolution
+    pr:     chirps     # or: agera5, nasa_power, gee
+    tasmax: chirts     # or: agera5, nasa_power, gee
+    tasmin: chirts     # or: agera5, nasa_power, gee
+    rsds:   agera5     # or: nasa_power (no key, 0.5 deg), gee
+    # GEE example (no rate limits, requires earthengine authenticate):
+    # pr:     gee
+    # tasmax: gee
+    # tasmin: gee
+    # rsds:   gee
+    # gee_project: "my-gee-project"   # omit for legacy accounts
   ncores:             2
   agera5_version:     "2_0"
   reference_variable: pr
@@ -278,15 +283,21 @@ Wheat uses the **WHAPS048** (NWheat) module. WHCER cultivars (e.g. IB1487) are *
 
 ### Climate sources
 
-| Variable | Source   | Notes |
-|----------|----------|-------|
-| `pr`     | `chirps` | Precipitation, 0.05 deg, 1981-present |
-| `tasmax` | `chirts` | Max temperature, 0.05 deg |
-| `tasmin` | `chirts` | Min temperature, 0.05 deg |
-| `rsds`   | `agera5` | Solar radiation, 0.1 deg — **requires CDS API key** at `~/.cdsapirc` |
-| `rsds`   | `nasa_power` | Alternative solar radiation, no API key needed, coarser (0.5 deg) |
+| Variable          | Valid sources                          | Notes |
+|-------------------|----------------------------------------|-------|
+| `pr`              | `chirps`, `agera5`, `nasa_power`, `gee` | Precipitation — CHIRPS default (0.05 deg, 1981-present) |
+| `tasmax`/`tasmin` | `chirts`, `agera5`, `nasa_power`, `gee` | Temperature — CHIRTS default (0.05 deg, 1983-present) |
+| `tas`             | `agera5`, `nasa_power`, `gee`           | Mean temperature |
+| `rsds`            | `agera5`, `nasa_power`, `gee`           | Solar radiation — AgERA5 (0.1 deg, CDS key required) or nasa_power (0.5 deg, no key) |
 
-**AgERA5 CDS setup** (one-time):
+**GEE source** — same data, no rate limits. Requires authentication:
+```bash
+pip install earthengine-api
+earthengine authenticate   # opens browser; saves token to ~/.config/earthengine/
+```
+Quick check: `python -c "import ee; ee.Initialize(); print(ee.String('GEE OK').getInfo())"`
+
+**AgERA5 CDS setup** (one-time, only if using `agera5` source):
 ```bash
 # ~/.cdsapirc
 url: https://cds.climate.copernicus.eu/api/v2

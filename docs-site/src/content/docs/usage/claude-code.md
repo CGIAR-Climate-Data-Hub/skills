@@ -8,7 +8,7 @@ sidebar:
 **Audience:** Developers with a Claude Pro / Max / Team subscription and Python installed.
 
 Claude Code connects directly to the `aggeodata` MCP server, reads the skills automatically
-from the `skills/` folder, and executes all code locally in your terminal.
+from the `.agents/skills/` folder, and executes all code locally in your terminal.
 
 ## Prerequisites
 
@@ -48,6 +48,6 @@ Claude Code — it should list `aggeodata`. Verify `.mcp.json` exists in the cur
 
 | Symptom | Fix |
 |---------|-----|
-| `aggeodata` not listed in `/mcp` | Launch `claude` from inside the `skills/` folder |
+| `aggeodata` not listed in `/mcp` | Launch `claude` from the project root |
 | `ModuleNotFoundError: aggeodata` | Re-run the pip install in Step 2 |
 | Download fails with 422 error | Update `aggeodata` to the latest version |

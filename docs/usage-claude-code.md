@@ -3,7 +3,7 @@
 **Audience:** Developers with a Claude Pro/Max/Team subscription and Python installed.
 
 Claude Code is the recommended way to run the full pipeline. It connects directly to the
-`aggeodata` MCP server, reads the skills automatically from the `skills/` folder, and
+`aggeodata` MCP server, reads the skills automatically from the `.agents/skills/` folder, and
 executes all code locally in your terminal.
 
 ---
@@ -110,7 +110,7 @@ years 2019–2021. Save to D:/tmp/hnd
 
 | Symptom | Fix |
 |---------|-----|
-| `aggeodata MCP server` not listed in `/mcp` | Confirm you launched `claude` from inside the `cdh_skills/` folder |
+| `aggeodata MCP server` not listed in `/mcp` | Confirm you launched `claude` from the project root |
 | `ModuleNotFoundError: aggeodata` | Re-run the pip install in Step 2 |
 | Download fails with 422 error | NASA POWER rejects bounding boxes exactly 10° wide — the package handles this automatically; update to the latest `aggeodata` version |
 | Merge error with different grid sizes | Update `aggeodata` — the S3/REST grid alignment fix is included in the latest version |

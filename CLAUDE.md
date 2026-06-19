@@ -2,7 +2,7 @@
 
 ## Custom skills
 
-This project contains domain-specific skill files in `skills/`. Before responding to any climate
+This project contains domain-specific skill files in `.agents/skills/`. Before responding to any climate
 or geospatial data request, read the relevant skill file and follow its instructions exactly.
 Do NOT inspect the aggeodata package with `inspect` or `dir` — all required API patterns are
 in the skill files.
@@ -11,13 +11,13 @@ in the skill files.
 
 | User intent | Skill file to read |
 |-------------|-------------------|
-| Download **and** visualize / "show me" / "I want to see" / "full pipeline" | `skills/gcf-pipeline/SKILL.md` |
-| Download only (no visualization requested) | `skills/climate-data-download/SKILL.md` |
-| Process / clip / aggregate already-downloaded data | `skills/geospatial-cube-processor/SKILL.md` |
-| Plot / chart / notebook from existing data | `skills/notebook-plots/SKILL.md` |
-| Spatial crop modeling / run crop model over a region | `skills/spatial-crop-modeler/skill.md` |
+| Download **and** visualize / "show me" / "I want to see" / "full pipeline" | `.agents/skills/gcf-pipeline/SKILL.md` |
+| Download only (no visualization requested) | `.agents/skills/climate-data-download/SKILL.md` |
+| Process / clip / aggregate already-downloaded data | `.agents/skills/geospatial-cube-processor/SKILL.md` |
+| Plot / chart / notebook from existing data | `.agents/skills/notebook-plots/SKILL.md` |
+| Spatial crop modeling / run crop model over a region | `.agents/skills/spatial-crop-modeler/SKILL.md` |
 
-### gcf-pipeline trigger phrases (read `skills/gcf-pipeline/SKILL.md` when any of these appear)
+### gcf-pipeline trigger phrases (read `.agents/skills/gcf-pipeline/SKILL.md` when any of these appear)
 
 - "download and visualize", "get and show", "download and plot"
 - "show me [variable] for [country/year]"
@@ -28,7 +28,7 @@ in the skill files.
 - "per department / per region / per province / per district" combined with a variable name
 - any prompt that clearly implies **all three steps**: fetch data + spatial aggregation + plot
 
-### climate-data-download trigger phrases (read `skills/climate-data-download/SKILL.md` when any of these appear)
+### climate-data-download trigger phrases (read `.agents/skills/climate-data-download/SKILL.md` when any of these appear)
 
 - "download data for", "get data for", "fetch data for"
 - "download [variable] for [country/year]"
@@ -37,7 +37,7 @@ in the skill files.
 - "I need [variable] data for"
 - any prompt that implies **fetching/downloading only** with no visualization or modeling requested
 
-### spatial-crop-modeler trigger phrases (read `skills/spatial-crop-modeler/skill.md` when any of these appear)
+### spatial-crop-modeler trigger phrases (read `.agents/skills/spatial-crop-modeler/SKILL.md` when any of these appear)
 
 - "yield prediction for", "predict yield for", "crop yield for"
 - "run crop model for", "simulate crop for"
@@ -48,7 +48,7 @@ in the skill files.
 
 ### How to invoke a skill
 
-1. Read the skill file (`skills/<skill-name>/SKILL.md`) with the Read tool.
+1. Read the skill file (`.agents/skills/<skill-name>/SKILL.md`) with the Read tool.
 2. Follow its stages exactly — collect parameters, show the plan, wait for confirmation, then execute.
 3. When a skill instructs you to read a sub-skill file, read it before continuing that stage.
 
