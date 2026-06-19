@@ -2,6 +2,16 @@
 
 These rules apply automatically to all tasks executed in this workspace.
 
+## 0. Environment Setup
+
+Before fetching skill files or executing any task, run this once per session and wait for it to finish:
+
+```bash
+pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
+```
+
+This installs `aggeodata` into the sandbox so MCP tools and Python fallback both work.
+
 ## 1. Skill Discovery & Execution
 
 All skills are under `.agents/skills/`. Before responding to any climate or geospatial data request,
@@ -47,3 +57,10 @@ any prompt implying fetching only with no visualization or modeling.
 - **MCP tool names**: Prefix with the server name, e.g. `aggeodata/download_chirps`.
 - **No redundant checks**: Do not check for directory existence, library installation, or environment
   variables unless a command fails. Assume the environment is configured.
+
+## 3. Troubleshooting & Friction Resolution
+
+- **MCP Fallback**: If the MCP tools are not registered in your active schema (e.g. tools like `aggeodata/download_chirps` return a parser error), fall back to writing and executing a Python script using the classes and methods documented in [.agents/skills/climate-data-download/references/python_api.md](file:///D:/OneDrive%20-%20CGIAR/scripts/skills/.agents/skills/climate-data-download/references/python_api.md).
+- **Dashboard Template**: To avoid token limits and truncation issues when generating the HTML dashboard, load the raw template from [.agents/skills/climate-dashboard/resources/template.html](file:///D:/OneDrive%20-%20CGIAR/scripts/skills/.agents/skills/climate-dashboard/resources/template.html) and use python code to inject the data into placeholders (`/* DATA_PLACEHOLDER */`, `{{title}}`, etc.).
+- **Swapped Dimensions**: AgERA5 NetCDFs downloaded via the Copernicus API may swap the latitude/longitude variables. Proactively check dataset dimensions before spatial clipping or zonal stats, and rename if necessary: `ds = ds.rename({'longitude': 'lon', 'latitude': 'lat'})`.
+

@@ -110,11 +110,17 @@ Output to D:/tmp/ethiopia_climate
 </TabItem>
 <TabItem label="Antigravity">
 
-Complete the [Antigravity setup](../usage/antigravity/) first (install `aggeodata`, configure the agent), then paste the system prompt below.
+Complete the [Antigravity setup](../usage/antigravity/) first, then paste the system prompt below. No manual `aggeodata` install needed — the prompt handles it automatically inside the sandbox.
 
 **System prompt**
 
 ```
+== ENVIRONMENT SETUP (run once before anything else) ==
+Run the following command and wait for it to complete before proceeding:
+
+pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
+
+== SKILL LOADING ==
 When the user gives you a climate data task, use the CDH climate pipeline skills from GitHub.
 
 Before planning or executing anything, use read_url_content to fetch ALL five skill files now:
@@ -127,8 +133,9 @@ Before planning or executing anything, use read_url_content to fetch ALL five sk
 
 Fetch all five BEFORE reading any of them. Treat gcf-pipeline as the controlling workflow.
 
-Important Execution Rules:
-- Translate all MCP tool calls from the colon format in the files (e.g., aggeodata:download_chirps, ag_cube_cm:run_simulation) to the Antigravity slash format (e.g., aggeodata/download_chirps, ag_cube_cm/run_simulation).
+== EXECUTION RULES ==
+- MCP tools: attempt using aggeodata/download_chirps etc. (slash format). If the tool returns an "unknown tool" or parser error, immediately fall back to a Python script using the aggeodata classes directly — do NOT retry the MCP call.
+- Python fallback: aggeodata is now installed in the sandbox. Write a script and execute it with run_command.
 - Do NOT re-fetch sub-skill files mid-task — they are already loaded.
 - Do NOT run environment or folder existence checks before starting.
 - Do NOT inspect the aggeodata package with inspect() or dir() — all API patterns are in the skill files.

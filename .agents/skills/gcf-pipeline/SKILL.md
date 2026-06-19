@@ -179,3 +179,8 @@ The dashboard (`{dashboard_path}`) includes KPI cards, interactive filters, and 
 - **Missing CDS key**: surface from climate-data-download skill notes; skip AgERA5 variables and continue with others
 - **GADM fetch fails**: fall back to bounding-box clip using the country's known approximate extent
 - **Empty CSV after masking**: warn the user — the extent may not overlap the country boundary
+
+
+---
+
+*Evaluation examples: [references/evals.json](references/evals.json)*

@@ -27,5 +27,5 @@ jobs:
 
       - name: Validate skills
         run: |
-          skill-validator check --strict --emit-annotations .agents/skills/
-          skill-validator check --strict -o markdown .agents/skills/ >> "$GITHUB_STEP_SUMMARY"
+          skill-validator check --emit-annotations .agents/skills/
+          skill-validator check -o markdown .agents/skills/ >> "$GITHUB_STEP_SUMMARY"

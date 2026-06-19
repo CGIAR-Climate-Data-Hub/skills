@@ -18,11 +18,7 @@ automatically — no copy-pasting, no local files to manage.
 | Python 3.10+ with `aggeodata` | See below |
 | Internet access | Required to fetch skill files from GitHub |
 
-**Install aggeodata once** (in your system Python or a virtual environment):
-
-```bash
-pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
-```
+The system prompt (Step 0) installs `aggeodata` automatically inside the sandbox at the start of each session — no manual install needed.
 
 ---
 
@@ -32,6 +28,12 @@ Paste the following block as the **system prompt** in Antigravity. Regular users
 see or touch this — it runs silently in the background.
 
 ```
+== ENVIRONMENT SETUP (run once before anything else) ==
+Run the following command and wait for it to complete before proceeding:
+
+pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
+
+== SKILL LOADING ==
 When the user gives you a climate data task, use the CDH climate pipeline skills from GitHub.
 
 Before planning or executing anything, use read_url_content to fetch ALL five skill files now:
@@ -44,8 +46,9 @@ Before planning or executing anything, use read_url_content to fetch ALL five sk
 
 Fetch all five BEFORE reading any of them. Treat gcf-pipeline as the controlling workflow.
 
-Important Execution Rules:
-- Translate all MCP tool calls from the colon format in the files (e.g., aggeodata:download_chirps) to the Antigravity slash format (e.g., aggeodata/download_chirps).
+== EXECUTION RULES ==
+- MCP tools: attempt using aggeodata/download_chirps etc. (slash format). If the tool returns an "unknown tool" or parser error, immediately fall back to a Python script using the aggeodata classes directly — do NOT retry the MCP call.
+- Python fallback: aggeodata is now installed in the sandbox. Write a script and execute it with run_command.
 - Do NOT re-fetch sub-skill files mid-task — they are already loaded.
 - Do NOT run environment or folder existence checks before starting.
 - Do NOT inspect the aggeodata package with inspect() or dir() — all API patterns are in the skill files.

@@ -389,4 +389,5 @@ If any assertion fails, **stop and fix before running the simulation** — all p
 
 ---
 
-*Evaluation examples: [references/evals.json](references/evals.json)*
+*Evaluation examples: [references/evals.json](references/evals.json)*  
+*Agent configuration reference: [references/agent-config.md](references/agent-config.md)*
