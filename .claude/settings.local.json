@@ -5,6 +5,7 @@
     ]
   },
   "disabledMcpjsonServers": [
-    "aggeodata"
+    "aggeodata",
+    "ag_cube_cm"
   ]
 }

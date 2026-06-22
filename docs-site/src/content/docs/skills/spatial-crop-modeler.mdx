@@ -211,7 +211,73 @@ ag-cube-cm run config.yaml
 </TabItem>
 <TabItem label="Antigravity">
 
-Complete the [Antigravity setup](../usage/antigravity/) first, including the one-time system prompt.
+Complete the [Antigravity setup](../usage/antigravity/) first, then paste the system prompt below.
+No manual install needed — the prompt installs `ag-cube-cm` and `aggeodata` inside the sandbox.
+
+**System prompt**
+
+```
+== ENVIRONMENT SETUP (run once before anything else) ==
+Run the following command and wait for it to complete before proceeding:
+
+pip install "ag-cube-cm[models] @ git+https://github.com/anaguilarar/ag-cube-cm.git" "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr nbformat plotly
+
+== SKILL LOADING ==
+When the user gives you a spatial crop modeling task (DSSAT, yield simulation, ag-cube-cm,
+"simulate maize/wheat/bean yield over [region]"), use the CDH skills from GitHub.
+
+Before planning or executing anything, use read_url_content to fetch ALL four skill files now:
+
+1. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/spatial-crop-modeler/SKILL.md
+2. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-data-download/SKILL.md
+3. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/geospatial-cube-processor/SKILL.md
+4. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-dashboard/SKILL.md
+
+Fetch all four BEFORE reading any of them. Treat spatial-crop-modeler as the controlling
+workflow. The other three are delegated sub-skills:
+  - climate-data-download → source routing (CHIRPS / CHIRTS / AgERA5 / NASA POWER / GEE)
+                            and the critical ncores rule
+  - geospatial-cube-processor → summarize climate + yield NetCDFs into CSV per admin unit
+  - climate-dashboard → build the final HTML dashboard with KPIs + yield map + climate charts
+
+== EXECUTION RULES ==
+- working_path in the ag-cube-cm config MUST have NO spaces (DSSAT is Fortran — silently fails).
+  Use D:/dssat_work, never D:/OneDrive - CGIAR/... for working_path. Output NetCDFs can go anywhere.
+- If the user selects GEE for ANY climate variable, force climate.ncores=1 in the YAML.
+  GEE writes per-day GeoTIFFs through HDF5 without parallel I/O — ncores>1 crashes the model.
+- After the simulation completes (HWAM NetCDF produced), build a dashboard:
+    a. Use geospatial-cube-processor to mask + summarize the climate cube to a CSV
+       (per admin level 1 or full country, depending on bbox size).
+    b. Use climate-dashboard on that CSV to produce the climate charts + KPI cards.
+    c. Add a yield map panel from the HWAM NetCDF — mean over planting_window × year,
+       rendered as a single PNG or embedded heatmap in the same HTML file.
+- Do NOT re-fetch sub-skill files mid-task — they are already loaded.
+- Do NOT inspect the aggeodata or ag-cube-cm packages with inspect() or dir() — all API
+  patterns are in the skill files.
+- Execute all generated code using run_command.
+```
+
+**Example request — full pipeline from scratch (Malawi maize)**
+
+```
+Simulate maize yield for Malawi for the 2021–2022 growing season.
+Download climate from GEE (CHIRPS for precipitation, CHIRTS for Tmax/Tmin, AgERA5 for rsds).
+Cultivar IB1072, planting date 2021-11-15, one planting window.
+Output everything (datacubes, yield NetCDF, dashboard HTML) to D:/data/malawi.
+```
+
+Antigravity will fetch all four skill files, show a single plan covering download + simulation
++ dashboard, and after confirmation produce:
+
+```
+D:/data/malawi/
+  climate_raw/                  — CHIRPS / CHIRTS / AgERA5 GEE downloads
+  climate_malawi_2021_2022.nc   — stacked climate cube
+  soil_malawi.nc                — SoilGrids cube
+  yield_malawi_2021.nc          — DSSAT output (variable: HWAM, kg/ha)
+  summary_ME_MWI_2021_2022.csv  — monthly climate per admin unit
+  malawi_yield_climate_2021.html — dashboard (yield map + climate KPIs + filters)
+```
 
 **Example request — with existing datacubes**
 
@@ -219,19 +285,19 @@ Complete the [Antigravity setup](../usage/antigravity/) first, including the one
 I want to run DSSAT for maize in Honduras. I already have the weather cube at
 D:/ag_cube_test/hnd_small/climate_raw/climate_hnd_small_2021_2021.nc and the soil
 cube at D:/ag_cube_test/hnd_small/soil_hnd_small.nc. Output to D:/results/yield_hnd.nc.
-Use cultivar IB1072 with planting date May 15 2021.
+Use cultivar IB1072 with planting date May 15 2021. Build a dashboard at the end.
 ```
 
-**Example request — full pipeline from scratch**
+**Troubleshooting**
 
-```
-Simulate maize yield for a small area in Honduras, bbox [-87.5, 14.2, -87.2, 14.5],
-year 2021. Download climate from CHIRPS, CHIRTS, and NASA POWER (no CDS key).
-Output everything to D:/ag_cube_test/hnd_small.
-```
-
-The skill is registered for the Antigravity Science Skills bundle (`science_bundle: true`)
-and will be available directly from the Antigravity skill library once published.
+| Symptom | Fix |
+|---------|-----|
+| `read_url_content` returns an error | Verify Antigravity has web access enabled |
+| `ModuleNotFoundError: ag_cube_cm` | Re-run the pip install line in the system prompt |
+| `DSSAT path not found` | Install DSSAT separately or set `dssat_path` in the YAML |
+| Model crashes when using GEE source | Confirm `climate.ncores: 1` (HDF5 not parallel-safe) |
+| `working_path` errors | Path contains spaces — use `D:/dssat_work` |
+| Dashboard step skipped | Confirm climate-dashboard was in the fetched skill list |
 
 </TabItem>
 <TabItem label="Codex">

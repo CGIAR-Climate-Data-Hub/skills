@@ -76,7 +76,7 @@ Ask these before doing anything else. Accept "I don't know" gracefully and apply
 | Admin level | If sub-country: level 1 (province/region) or level 2 (district)? | 1 |
 | Output folder | Where to save files? **No spaces in path.** | **required** |
 | **Download source** | Use default sources (CHIRPS/CHIRTS/AgERA5/NASA POWER) **or Google Earth Engine (GEE)**? | default |
-| CPU cores | Parallel download workers? | 4 (GEE) / 1 (CHIRPS or CHIRTS present) |
+| CPU cores | Parallel download workers? | 1 (GEE, CHIRPS, or CHIRTS present) / 4 (AgERA5 only) |
 
 Alternatively, accept a **bounding box** `[xmin, ymin, xmax, ymax]` in EPSG:4326 instead of a country/region — pass it as the `bbox` parameter.
 
@@ -166,10 +166,9 @@ Direct API calls bypass the rate-limit safeguards and have caused CrowdSec bans 
 | CHIRPS or CHIRTS present | **1** | CrowdSec bans >1 worker on data.chc.ucsb.edu |
 | AgERA5 only | 4 | CDS API handles parallel requests |
 | NASA POWER only | 1 | S3 Zarr backend; ncores ignored |
-| GEE only | 4 | No server ban risk; GEE manages its own rate limits |
-| GEE mixed with CHIRPS/CHIRTS | **1** | CHIRPS safety takes priority |
+| GEE (any variable) | **1** | GEE writes per-day GeoTIFFs through HDF5 without parallel I/O — `ncores > 1` crashes downstream models (e.g. ag-cube-cm) |
 
-When mixing CHIRPS/CHIRTS with anything else, always set `ncores: 1`.
+When mixing CHIRPS/CHIRTS or GEE with anything else, always set `ncores: 1`.
 
 ### Install (run once)
 
@@ -270,7 +269,7 @@ SOIL:
 
 GENERAL:
   suffix:   "{SUFFIX}"
-  ncores:   4            # safe for GEE — no UCSB ban risk
+  ncores:   1            # GEE requires ncores=1 — HDF5 writer is not parallel-safe
   task:     "download"
 
 PATHS:
@@ -417,29 +416,13 @@ The CDS API queues one request per year. Multi-year ranges run in parallel (`nco
 ## Sub-country downloads
 Always confirm admin unit spelling with `list_admin_units` before passing `feature_name`. Clips reduce file sizes by 10–100× vs full country.
 
----
+## AgERA5 variable keys
 
-# AgERA5 variable keys
-
-Pass one of these as the `variable` argument to `download_agera5`:
-
-| Key | Description |
-|-----|-------------|
-| `temperature_tmax` | Daily maximum 2 m air temperature |
-| `temperature_tmin` | Daily minimum 2 m air temperature |
-| `solar_radiation` | Surface downwelling shortwave flux (J m⁻²) |
-| `wind_speed` | 10 m wind speed (m s⁻¹) |
-| `vapour_pressure` | 2 m vapour pressure (hPa) |
-| `vapour_pressure_defficit` | Vapour pressure deficit at Tmax |
-| `relative_humidity_max` | Daily maximum relative humidity |
-| `relative_humidity_min` | Daily minimum relative humidity |
-| `relative_humidity_06` | Relative humidity snapshot at 06:00 UTC |
-| `relative_humidity_09` | Relative humidity snapshot at 09:00 UTC |
-| `relative_humidity_12` | Relative humidity snapshot at 12:00 UTC |
-| `relative_humidity_15` | Relative humidity snapshot at 15:00 UTC |
-| `relative_humidity_18` | Relative humidity snapshot at 18:00 UTC |
-| `dew_point_temperature` | Mean 2 m dew-point temperature |
-| `reference_evapotranspiration` | FAO-56 reference ET (mm day⁻¹) |
+When the plan includes AgERA5, read [`references/python_api.md`](references/python_api.md)
+(section 6) for the full list of `variable` keys accepted by `download_agera5` and
+`AgEra5Downloader.download(...)` — covers temperature, solar radiation, wind speed,
+vapour pressure, hourly relative humidity (06/09/12/15/18 UTC), dew point, and
+reference ET.
 
 ---
 
@@ -496,35 +479,11 @@ Here's the plan:
 │ Tmax / Tmin   │ GEE    │ UCSB-CHG/CHIRTS/DAILY        │
 └───────────────┴────────┴──────────────────────────────┘
 
-GEE project: cgiar-climate | ncores: 4 | No UCSB rate limits.
+GEE project: cgiar-climate | ncores: 1 (HDF5 writer not parallel-safe) | No UCSB rate limits.
 Shall I proceed?
 ```
 
 [After confirmation: generate YAML with `source: gee` and `gee_project: cgiar-climate` for each variable, call run_download]
-
----
-
-# EXAMPLE — Hourly RH for disease modeling
-
-**User:** I need 6 AM, 9 AM, and 12 PM relative humidity and reference ET for Ashanti region, Ghana, 2021.
-
-**You:**
-```
-Here's the routing plan (all AgERA5 — CDS API key required):
-
-| Variable      | Tool           | Key                    |
-|---------------|----------------|------------------------|
-| RH at 06:00   | download_agera5 | relative_humidity_06  |
-| RH at 09:00   | download_agera5 | relative_humidity_09  |
-| RH at 12:00   | download_agera5 | relative_humidity_12  |
-| Reference ET  | download_agera5 | reference_evapotranspiration |
-
-Country: Ghana | Region: Ashanti (admin level 1) | Period: 2021-01-01 → 2021-12-31
-
-Do you have a CDS API key configured in ~/.cdsapirc?
-```
-
-[After confirmation: call aggeodata/list_admin_units to verify "Ashanti", then four sequential download_agera5 calls]
 
 ---
 
@@ -533,3 +492,8 @@ Do you have a CDS API key configured in ~/.cdsapirc?
 - After each tool call: 2 sentences — what landed on disk and the output path.
 - On error: quote the error message, diagnose (missing CDS key, spaces in path, rate limit), suggest the fix.
 - After all downloads complete, point the user to the datacube-stack skill for the next step.
+
+
+---
+
+*Python API reference: [references/python_api.md](references/python_api.md)*

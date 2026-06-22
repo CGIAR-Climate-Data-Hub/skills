@@ -27,5 +27,12 @@ jobs:
 
       - name: Validate skills
         run: |
+          set +e
           skill-validator check --emit-annotations .agents/skills/
-          skill-validator check -o markdown .agents/skills/ >> "$GITHUB_STEP_SUMMARY"
+          code=$?
+          skill-validator check -o markdown .agents/skills/ >> "$GITHUB_STEP_SUMMARY" || true
+          # exit 0 = pass, exit 2 = warnings only (don't fail), anything else = real error
+          if [ "$code" -eq 0 ] || [ "$code" -eq 2 ]; then
+            exit 0
+          fi
+          exit "$code"

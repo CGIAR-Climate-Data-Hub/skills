@@ -88,3 +88,26 @@ downloaded_paths = dl.download(
     boundaries=[-3.2554, 4.7367, 1.1918, 11.1733] # [xmin, ymin, xmax, ymax]
 )
 ```
+
+## 6. AgERA5 variable keys
+
+Pass one of these as the `variable` argument to `download_agera5` (MCP tool) or to
+`AgEra5Downloader.download(variable=...)` (Python API):
+
+| Key | Description |
+|-----|-------------|
+| `temperature_tmax` | Daily maximum 2 m air temperature |
+| `temperature_tmin` | Daily minimum 2 m air temperature |
+| `solar_radiation` | Surface downwelling shortwave flux (J m⁻²) |
+| `wind_speed` | 10 m wind speed (m s⁻¹) |
+| `vapour_pressure` | 2 m vapour pressure (hPa) |
+| `vapour_pressure_defficit` | Vapour pressure deficit at Tmax |
+| `relative_humidity_max` | Daily maximum relative humidity |
+| `relative_humidity_min` | Daily minimum relative humidity |
+| `relative_humidity_06` | Relative humidity snapshot at 06:00 UTC |
+| `relative_humidity_09` | Relative humidity snapshot at 09:00 UTC |
+| `relative_humidity_12` | Relative humidity snapshot at 12:00 UTC |
+| `relative_humidity_15` | Relative humidity snapshot at 15:00 UTC |
+| `relative_humidity_18` | Relative humidity snapshot at 18:00 UTC |
+| `dew_point_temperature` | Mean 2 m dew-point temperature |
+| `reference_evapotranspiration` | FAO-56 reference ET (mm day⁻¹) |
