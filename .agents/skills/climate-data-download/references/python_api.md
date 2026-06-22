@@ -73,23 +73,7 @@ downloaded_paths = dl.download(
 )
 ```
 
-## 5. SoilGrids Downloader
-
-```python
-from aggeodata.ingestion.soil import SoilGridsDownloader
-
-dl = SoilGridsDownloader(
-    soil_layers=["clay", "sand", "silt", "bdod", "cfvo", "soc", "phh2o", "wv0010", "wv0033", "wv1500"],
-    depths=["0-5", "5-15", "15-30", "30-60", "60-100"],
-    output_folder="D:/data/soil_raw"
-)
-# returns dict: {filename: local_path}
-downloaded_paths = dl.download(
-    boundaries=[-3.2554, 4.7367, 1.1918, 11.1733] # [xmin, ymin, xmax, ymax]
-)
-```
-
-## 6. AgERA5 variable keys
+## 5. AgERA5 variable keys
 
 Pass one of these as the `variable` argument to `download_agera5` (MCP tool) or to
 `AgEra5Downloader.download(variable=...)` (Python API):

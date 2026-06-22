@@ -1,0 +1,49 @@
+{
+  "skill_name": "soil-data-download",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Download SoilGrids data for Malawi (ISO3 MWI) — I need clay, sand, silt, soil organic carbon, pH, and the three water content layers (wv0010, wv0033, wv1500), all at the standard five depths. Save the rasters to D:/data/malawi/soil_raw and also build a single NetCDF cube I can load in xarray. Use sand as the reference variable.",
+      "expected_output": "Plan table shown and confirmed, then SoilGridsDownloader called with the 8 variables and 5 depths over Malawi's bounding box. After download, SoilDataCubeBuilder is invoked with crs=IGH and target_crs='EPSG:4326', producing soil_malawi.nc. Validation checks (CRS sanity, no flat-format vars) are run and pass.",
+      "files": [],
+      "assertions": [
+        "Plan table is displayed before any download call",
+        "SoilGridsDownloader is instantiated with the 8 requested soil_layers",
+        "depths argument includes all five standard depths (0-5, 5-15, 15-30, 30-60, 60-100)",
+        "Malawi's bounding box is resolved (either via _fetch_geojson_cached or hard-coded ~[32.67, -17.13, 35.92, -9.36])",
+        "SoilDataCubeBuilder is called with crs containing '+proj=igh' and target_crs='EPSG:4326'",
+        "reference_variable='sand' is passed to the builder",
+        "Output NetCDF path matches soil_malawi*.nc under D:/data/malawi",
+        "CRS validation (y < 90, x < 180) is performed after building the cube"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I tried using the climate-data-download skill to grab SoilGrids data for the Mzimba district in Malawi and got `reference_variable: non-null string required` from the schema. Can you help me get the soil rasters downloaded the right way? Output to /mnt/data/malawi_mzimba.",
+      "expected_output": "The agent recognizes this is the soil schema issue, routes to soil-data-download, and either (a) uses the Python API directly (preferred) or (b) generates a soil-only YAML with GENERAL.reference_variable: sand. Mzimba's extent is resolved via admin level 2 lookup.",
+      "files": [],
+      "assertions": [
+        "The agent explicitly identifies the climate YAML schema as climate-only and switches to this skill",
+        "Mzimba is resolved as admin level 2 within MWI (either via _fetch_geojson_cached or list_admin_units)",
+        "If YAML is generated, GENERAL.reference_variable is set to 'sand' (or another non-null soil layer)",
+        "If YAML is generated, DATES and CLIMATE blocks are omitted entirely (no null reference_variable anywhere)",
+        "Output folder is /mnt/data/malawi_mzimba (no trailing slash issues)",
+        "Final summary mentions which approach (Python API vs YAML) was used and why"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I already downloaded SoilGrids tiles for Ethiopia into D:/eth/soil_raw using an older script. I want to build a clean soil cube from them and verify the result is in EPSG:4326 and not in the flat 'clay_0-5cm_mean' format that breaks ag-cube-cm.",
+      "expected_output": "The agent skips Step 3 (no fresh download), calls SoilDataCubeBuilder with IGH source CRS → EPSG:4326 target CRS, then runs the full validation suite: flat-format check (with reshape if needed), CRS bounds assertions, and variable completeness. If flat vars are detected, reshape_flat_soil_cube is applied and the cube is overwritten.",
+      "files": [],
+      "assertions": [
+        "No SoilGridsDownloader call is made (download stage is skipped)",
+        "SoilDataCubeBuilder is invoked on D:/eth/soil_raw with crs containing '+proj=igh' and target_crs='EPSG:4326'",
+        "flat_vars check (looking for '_cm_mean' in variable names) is performed on the resulting cube",
+        "If flat vars are found, reshape_flat_soil_cube is imported from aggeodata.transform.soil_cube and applied",
+        "After reshape (if any), the cube is saved back to the same NetCDF path",
+        "CRS bounds assertions (|y.min()| < 90, |x.min()| < 180) are evaluated"
+      ]
+    }
+  ]
+}

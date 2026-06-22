@@ -226,17 +226,19 @@ pip install "ag-cube-cm[models] @ git+https://github.com/anaguilarar/ag-cube-cm.
 When the user gives you a spatial crop modeling task (DSSAT, yield simulation, ag-cube-cm,
 "simulate maize/wheat/bean yield over [region]"), use the CDH skills from GitHub.
 
-Before planning or executing anything, use read_url_content to fetch ALL four skill files now:
+Before planning or executing anything, use read_url_content to fetch ALL five skill files now:
 
 1. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/spatial-crop-modeler/SKILL.md
 2. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-data-download/SKILL.md
-3. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/geospatial-cube-processor/SKILL.md
-4. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-dashboard/SKILL.md
+3. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/soil-data-download/SKILL.md
+4. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/geospatial-cube-processor/SKILL.md
+5. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-dashboard/SKILL.md
 
-Fetch all four BEFORE reading any of them. Treat spatial-crop-modeler as the controlling
-workflow. The other three are delegated sub-skills:
-  - climate-data-download → source routing (CHIRPS / CHIRTS / AgERA5 / NASA POWER / GEE)
+Fetch all five BEFORE reading any of them. Treat spatial-crop-modeler as the controlling
+workflow. The other four are delegated sub-skills:
+  - climate-data-download → climate source routing (CHIRPS / CHIRTS / AgERA5 / NASA POWER / GEE)
                             and the critical ncores rule
+  - soil-data-download → SoilGrids download, soil cube build (IGH→EPSG:4326), and cube validation
   - geospatial-cube-processor → summarize climate + yield NetCDFs into CSV per admin unit
   - climate-dashboard → build the final HTML dashboard with KPIs + yield map + climate charts
 

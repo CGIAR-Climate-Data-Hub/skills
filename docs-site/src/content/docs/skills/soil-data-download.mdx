@@ -1,0 +1,187 @@
+---
+title: Soil Data Download
+description: Downloads SoilGrids soil property rasters and builds a validated EPSG:4326 soil datacube ready for crop modeling.
+sidebar:
+  order: 3
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs>
+<TabItem label="Explanation">
+
+**Type:** Data ingestion (soil)
+**Skill file:** `.agents/skills/soil-data-download/SKILL.md`
+**Raw URL:** `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/soil-data-download/SKILL.md`
+
+---
+
+The soil counterpart to `climate-data-download`. You say which soil properties and
+which area; the skill downloads SoilGrids rasters and optionally stacks them into a
+single validated NetCDF cube ready for `spatial-crop-modeler` or
+`geospatial-cube-processor`.
+
+## What it covers
+
+| Stage | Tool | Output |
+|-------|------|--------|
+| Download | `SoilGridsDownloader` (Python) or `aggeodata` soil-only YAML | One GeoTIFF per (variable, depth, statistic) under `soil_raw/` |
+| Build cube | `SoilDataCubeBuilder` with explicit IGH source CRS → EPSG:4326 target | Single multi-variable NetCDF |
+| Validate | Flat-format reshape · CRS bounds · variable completeness · climate-extent overlap | Cube ready for downstream tools |
+
+## SoilGrids variables (default set)
+
+| Variable | Description | Used for |
+|----------|-------------|----------|
+| `clay`, `sand`, `silt` | Texture (g/kg) | Soil hydrology, root growth |
+| `bdod` | Bulk density | DSSAT, root penetration |
+| `cfvo` | Coarse fragments | Effective soil volume |
+| `soc` | Soil organic carbon (dg/kg) | Fertility |
+| `phh2o` | pH (H₂O) | Crop suitability |
+| `wv0010`, `wv0033`, `wv1500` | Volumetric water content at 10 / 33 / 1500 kPa | Field capacity, wilting point |
+
+Depths (all in cm): `0-5`, `5-15`, `15-30`, `30-60`, `60-100`.
+
+## The two non-obvious gotchas
+
+1. **CRS** — SoilGrids serves data in Interrupted Goode Homolosine. `SoilDataCubeBuilder`'s
+   default `crs="ESRI:54052"` produces broken extents. **Always pass
+   `crs="+proj=igh +lat_0=0 +lon_0=0 +datum=WGS84 +units=m +no_defs"` and
+   `target_crs="EPSG:4326"` explicitly.**
+2. **`reference_variable`** — when using the YAML pipeline, `GENERAL.reference_variable`
+   must be a non-null soil layer name. Default: **`sand`**. Setting it to `null` raises
+   `reference_variable: non-null string required`.
+
+## Output
+
+A NetCDF cube (`soil_<country>.nc`) with dimensions `(y, x, depth)` per variable, in
+EPSG:4326. The skill always validates it with three checks (CRS bounds, flat-format
+reshape if needed, variable completeness) before returning.
+
+</TabItem>
+<TabItem label="Claude Code">
+
+Complete the [Claude Code setup](../usage/claude-code/) first, then launch `claude` from the project root.
+
+**Example request — full pipeline (Malawi)**
+
+```
+Download SoilGrids data for Malawi — clay, sand, silt, soil organic carbon, pH,
+and the three water content layers (wv0010, wv0033, wv1500) at the five standard
+depths. Save rasters to D:/data/malawi/soil_raw and build a soil cube I can load
+in xarray. Use sand as the reference variable.
+```
+
+Claude Code shows a plan before downloading:
+
+```
+Soil download plan
+| Setting     | Value
+| Source      | SoilGrids
+| Variables   | clay, sand, silt, soc, phh2o, wv0010, wv0033, wv1500
+| Depths      | 0-5, 5-15, 15-30, 30-60, 60-100 cm
+| Extent      | [32.67, -17.13, 35.92, -9.36]  (Malawi)
+| Output      | D:/data/malawi/soil_raw + soil_malawi.nc
+| Reference   | sand
+```
+
+Confirm and the skill downloads + builds + validates.
+
+**Example request — cube from existing tiles**
+
+```
+I already downloaded SoilGrids tiles for Ethiopia into D:/eth/soil_raw using an
+older script. Build a clean soil cube from them in EPSG:4326 and check the result
+isn't in the flat 'clay_0-5cm_mean' format.
+```
+
+**Troubleshooting**
+
+| Symptom | Fix |
+|---------|-----|
+| `reference_variable: non-null string required` | Set `GENERAL.reference_variable: sand` in the YAML |
+| Cube coordinates are huge numbers (e.g. `y = 1500000`) | Pass `crs=IGH` and `target_crs="EPSG:4326"` to `SoilDataCubeBuilder` |
+| `no valid index for a 0-dimensional object` downstream | Cube is in flat format — run `reshape_flat_soil_cube` then re-save |
+| Downloads time out / 403 | Wait and retry — `SoilGridsDownloader` resumes existing tiles |
+
+</TabItem>
+<TabItem label="Antigravity">
+
+Complete the [Antigravity setup](../usage/antigravity/) first, then paste the system prompt below.
+
+**System prompt**
+
+```
+== ENVIRONMENT SETUP (run once before anything else) ==
+pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git"
+
+== SKILL LOADING ==
+When the user asks to download SoilGrids data, soil texture/clay/sand/silt/SOC/pH,
+or build a soil datacube, fetch this skill before doing anything:
+
+https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/soil-data-download/SKILL.md
+
+If the user also mentions climate variables (precipitation, temperature, etc.) for
+the SAME workflow, additionally fetch:
+
+https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-data-download/SKILL.md
+
+If they want to run a crop model afterwards, fetch spatial-crop-modeler instead and
+let it orchestrate.
+
+== EXECUTION RULES ==
+- Output folders must have NO spaces (Windows rasterio range-request bug).
+- When building the cube, ALWAYS pass crs="+proj=igh +lat_0=0 +lon_0=0 +datum=WGS84 +units=m +no_defs"
+  and target_crs="EPSG:4326" to SoilDataCubeBuilder. Never accept the default ESRI:54052.
+- When generating a soil-only YAML, GENERAL.reference_variable MUST be a non-null soil
+  layer (default: sand). Setting it to null fails schema validation.
+- Always run the three validation checks (flat-format reshape, CRS bounds, variable
+  completeness) before returning success.
+- Execute all generated code using run_command.
+```
+
+**Example request**
+
+```
+Download SoilGrids data for Malawi (clay, sand, silt, SOC, pH, wv0010, wv0033,
+wv1500) at all five standard depths. Save to /tmp/data/malawi/soil_raw and build
+a validated cube at /tmp/data/malawi/soil_malawi.nc.
+```
+
+Antigravity fetches the skill, shows a plan, downloads + builds + validates, and
+reports the final cube path with its dimensions.
+
+</TabItem>
+<TabItem label="Codex">
+
+Complete the [OpenAI Codex setup](../usage/codex/) first, then paste the system prompt below.
+
+**System prompt**
+
+```
+When the user asks to download SoilGrids data (soil texture, clay/sand/silt, SOC,
+pH, water content layers wv0010/wv0033/wv1500), or to build a soil datacube, fetch
+and follow this skill:
+
+https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/soil-data-download/SKILL.md
+
+The skill's references/python_api.md has the SoilGridsDownloader / SoilDataCubeBuilder
+signatures and the reshape_flat_soil_cube helper.
+
+Always pass crs="+proj=igh ..." and target_crs="EPSG:4326" explicitly to the cube
+builder. For soil-only YAMLs, GENERAL.reference_variable must be a non-null soil
+layer (default: sand).
+
+Execute all generated code via run_command (or equivalent shell tool).
+```
+
+**Example request**
+
+```
+Download SoilGrids data for Malawi (clay, sand, silt, SOC, pH, wv0010, wv0033,
+wv1500) at all five standard depths. Save to /tmp/data/malawi/soil_raw and build
+a validated cube at /tmp/data/malawi/soil_malawi.nc.
+```
+
+</TabItem>
+</Tabs>

@@ -25,7 +25,8 @@ All required API patterns are in the skill files.
 | User intent | Skill file |
 |-------------|-----------|
 | Download **and** visualize / "show me" / "full pipeline" | `.agents/skills/gcf-pipeline/SKILL.md` |
-| Download only (no visualization) | `.agents/skills/climate-data-download/SKILL.md` |
+| Download climate data only (no visualization) | `.agents/skills/climate-data-download/SKILL.md` |
+| Download soil data (SoilGrids) / build soil cube | `.agents/skills/soil-data-download/SKILL.md` |
 | Process / clip / aggregate already-downloaded data | `.agents/skills/geospatial-cube-processor/SKILL.md` |
 | Plot / chart / notebook from existing data | `.agents/skills/notebook-plots/SKILL.md` |
 | Spatial crop modeling / run crop model over a region | `.agents/skills/spatial-crop-modeler/SKILL.md` |
@@ -38,7 +39,12 @@ All required API patterns are in the skill files.
 any prompt implying all three steps: fetch + aggregate + plot.
 
 **climate-data-download**: "download data for", "get data for", "fetch climate data", "I need [variable] data for",
-any prompt implying fetching only with no visualization or modeling.
+any prompt implying fetching climate-only with no visualization or modeling. **Not** soil — route soil to
+`soil-data-download`.
+
+**soil-data-download**: "SoilGrids", "download soil [variable] for", "clay/sand/silt for", "soil organic carbon",
+"soil pH", "soil texture", "soil cube", any prompt referencing the soil depth layers (`0-5`, `5-15`, `15-30`,
+`30-60`, `60-100`), or the schema error `reference_variable: non-null string required` while attempting soil downloads.
 
 **spatial-crop-modeler**: "yield prediction", "run crop model", "simulate crop", "model [crop] in [country]",
 "estimate production", any prompt implying running a crop model spatially.

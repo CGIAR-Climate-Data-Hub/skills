@@ -304,60 +304,32 @@ url: https://cds.climate.copernicus.eu/api/v2
 key: <your-uid>:<your-api-key>
 ```
 
-### Soil variables (SoilGrids defaults)
+### Soil cube — delegate to `soil-data-download`
 
-```
-clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500
-```
-Depths: `0-5`, `5-15`, `15-30`, `60-100` cm
+Defaults: `clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500` at depths
+`0-5`, `5-15`, `15-30`, `30-60`, `60-100` cm.
 
-#### Soil cube creation — always pass the correct native CRS
+In `full_pipeline` mode, before invoking `ag-cube-cm run`, read
+`.agents/skills/soil-data-download/SKILL.md` and follow its Steps 3–5 (download → build
+with explicit `crs="+proj=igh..."` and `target_crs="EPSG:4326"` → validate). That skill
+owns:
 
-SoilGrids files use **Interrupted Goode Homolosine** projection. The `SoilDataCubeBuilder` default `crs="ESRI:54052"` is wrong and produces a cube with bad geographic extents. Always pass the CRS explicitly:
+- the SoilGrids CRS gotcha (never accept `SoilDataCubeBuilder`'s default ESRI:54052)
+- the flat-format reshape (`reshape_flat_soil_cube` for `clay_0-5cm_mean`-style cubes)
+- CRS + variable-completeness assertions
 
-```python
-from aggeodata.transform.soil_cube import SoilDataCubeBuilder
-
-IGH = "+proj=igh +lat_0=0 +lon_0=0 +datum=WGS84 +units=m +no_defs"
-
-builder = SoilDataCubeBuilder(
-    data_folder="D:/data/<country>/soil_raw",
-    variables=["clay", "sand", "silt", "bdod", "cfvo", "soc", "phh2o", "wv0010", "wv0033", "wv1500"],
-    reference_variable="wv1500",
-    crs=IGH,               # ← always explicit
-    target_crs="EPSG:4326",
-)
-builder.build_and_save(output_path="D:/data/<country>", filename="soil_<country>.nc")
-```
-
-#### Soil cube validation — run before every simulation
-
-After building (or receiving) a soil cube, always validate it before passing to `ag-cube-cm`:
+Then add **one extra assertion** specific to crop modeling — soil and weather extents
+must overlap on both axes, or `ag-cube-cm` will skip every pixel:
 
 ```python
 import xarray as xr
-
-soil = xr.open_dataset("soil_<country>.nc")
-
-# 1. Flat format check — old pipelines store one variable per depth
-flat_vars = [v for v in soil.data_vars if "_cm_mean" in v]
-if flat_vars:
-    from aggeodata.transform.soil_cube import reshape_flat_soil_cube
-    soil = reshape_flat_soil_cube(soil)
-    soil.to_netcdf("soil_<country>.nc")   # overwrite with fixed version
-
-# 2. CRS check — coordinates must be in degrees, not projected meters
-assert abs(float(soil.y.min())) < 90,  "Soil y looks projected (metres). Rebuild with target_crs='EPSG:4326'."
-assert abs(float(soil.x.min())) < 180, "Soil x looks projected (metres). Rebuild with target_crs='EPSG:4326'."
-
-# 3. Extent overlap with weather
+soil    = xr.open_dataset("soil_<country>.nc")
 weather = xr.open_dataset("climate_<country>.nc")
-assert float(soil.y.min()) <= float(weather.y.max()), "Soil and weather extents don't overlap on Y axis."
-assert float(soil.x.min()) <= float(weather.x.max()), "Soil and weather extents don't overlap on X axis."
-print("Soil cube OK")
+assert float(soil.y.min()) <= float(weather.y.max()), "Soil/weather Y extents don't overlap."
+assert float(soil.x.min()) <= float(weather.x.max()), "Soil/weather X extents don't overlap."
 ```
 
-If any assertion fails, **stop and fix before running the simulation** — all pixels will either fail or skip if the soil cube is wrong.
+If either assertion fails, stop and rebuild the soil cube on the climate extent.
 
 ---
 

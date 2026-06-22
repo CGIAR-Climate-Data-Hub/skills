@@ -12,7 +12,8 @@ in the skill files.
 | User intent | Skill file to read |
 |-------------|-------------------|
 | Download **and** visualize / "show me" / "I want to see" / "full pipeline" | `.agents/skills/gcf-pipeline/SKILL.md` |
-| Download only (no visualization requested) | `.agents/skills/climate-data-download/SKILL.md` |
+| Download climate data only (no visualization requested) | `.agents/skills/climate-data-download/SKILL.md` |
+| Download soil data (SoilGrids) / build soil cube | `.agents/skills/soil-data-download/SKILL.md` |
 | Process / clip / aggregate already-downloaded data | `.agents/skills/geospatial-cube-processor/SKILL.md` |
 | Plot / chart / notebook from existing data | `.agents/skills/notebook-plots/SKILL.md` |
 | Spatial crop modeling / run crop model over a region | `.agents/skills/spatial-crop-modeler/SKILL.md` |
@@ -36,6 +37,18 @@ in the skill files.
 - "fetch climate data", "retrieve weather data"
 - "I need [variable] data for"
 - any prompt that implies **fetching/downloading only** with no visualization or modeling requested
+- **Not** soil — for soil variables route to `soil-data-download` instead
+
+### soil-data-download trigger phrases (read `.agents/skills/soil-data-download/SKILL.md` when any of these appear)
+
+- "SoilGrids", "soil grids", "soil data for [country]"
+- "download soil", "get soil [variable] for"
+- "clay/sand/silt for [region]"
+- "soil organic carbon", "soil pH", "soil texture"
+- "soil cube", "build a soil datacube"
+- "soil water content", "wv0010 / wv0033 / wv1500"
+- any prompt mentioning the depths `0-5`, `5-15`, `15-30`, `30-60`, `60-100` (cm)
+- the schema error `reference_variable: non-null string required` while attempting soil downloads
 
 ### spatial-crop-modeler trigger phrases (read `.agents/skills/spatial-crop-modeler/SKILL.md` when any of these appear)
 

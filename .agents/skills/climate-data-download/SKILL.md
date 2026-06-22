@@ -279,6 +279,17 @@ PATHS:
 Omit `gee_project` lines entirely if the user left the project blank (legacy account).  
 Repeat `gee_project` under each variable — it is a per-variable field in the schema.
 
+### `reference_variable` (required, never `null`)
+
+`GENERAL.reference_variable` is a non-null string identifying one of the enabled
+`CLIMATE.variables` (default: `pr` if precipitation is present, otherwise the first
+listed variable). Climate-only YAMLs always have at least one valid choice here.
+
+For **soil data** (SoilGrids), don't extend this pipeline — use the dedicated
+`soil-data-download` skill, which handles the soil-only YAML schema, the SoilGrids CRS
+gotcha, and cube validation. For **mixed climate + soil** (e.g. crop modeling), use
+the `spatial-crop-modeler` skill.
+
 ### Run the pipeline
 
 Execute this using python via `run_command`:
@@ -419,35 +430,10 @@ Always confirm admin unit spelling with `list_admin_units` before passing `featu
 ## AgERA5 variable keys
 
 When the plan includes AgERA5, read [`references/python_api.md`](references/python_api.md)
-(section 6) for the full list of `variable` keys accepted by `download_agera5` and
+(section 5) for the full list of `variable` keys accepted by `download_agera5` and
 `AgEra5Downloader.download(...)` — covers temperature, solar radiation, wind speed,
 vapour pressure, hourly relative humidity (06/09/12/15/18 UTC), dew point, and
 reference ET.
-
----
-
-# EXAMPLE INTERACTION
-
-**User:** I need precipitation and temperature for Ghana from 2020 to 2022. Output to D:/data/ghana
-
-**You:**
-```
-Here's what I'll download:
-
-| Variable      | Source      | Tool             |
-|---------------|-------------|------------------|
-| Precipitation | CHIRPS      | download_chirps  |
-| Tmax / Tmin   | CHIRTS-ERA5 | download_chirts  |
-
-Country: Ghana | Period: 2020-01-01 → 2022-12-31 | Region: full country
-Output: D:/data/ghana
-
-Shall I proceed?
-```
-
-**User:** yes
-
-**You:** [calls aggeodata/download_chirps, reports result, calls aggeodata/download_chirts, reports result, shows final summary table]
 
 ---
 
@@ -492,8 +478,3 @@ Shall I proceed?
 - After each tool call: 2 sentences — what landed on disk and the output path.
 - On error: quote the error message, diagnose (missing CDS key, spaces in path, rate limit), suggest the fix.
 - After all downloads complete, point the user to the datacube-stack skill for the next step.
-
-
----
-
-*Python API reference: [references/python_api.md](references/python_api.md)*

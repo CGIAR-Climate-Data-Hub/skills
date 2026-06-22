@@ -32,6 +32,7 @@ export default defineConfig({
           items: [
             { label: 'GCF Pipeline', slug: 'skills/gcf-pipeline' },
             { label: 'Climate Data Download', slug: 'skills/climate-data-download' },
+            { label: 'Soil Data Download', slug: 'skills/soil-data-download' },
             { label: 'Geospatial Cube Processor', slug: 'skills/geospatial-cube-processor' },
             { label: 'Notebook Plots', slug: 'skills/notebook-plots' },
             { label: 'Climate Dashboard', slug: 'skills/climate-dashboard' },
