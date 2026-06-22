@@ -190,7 +190,7 @@ climate:
     # gee_project: "my-gee-project"   # omit for legacy accounts
   ncores:             2
   agera5_version:     "2_0"
-  reference_variable: pr
+  reference_variable: pr   # default: finest grid in the plan — see "Reference variable choice" below
 
 soil:
   variables: [clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500]
@@ -218,6 +218,24 @@ management:
   fertilizer_schedule:  []
 ```
 
+#### Reference variable choice
+
+`climate.reference_variable` picks the grid donor — every other climate variable
+is reprojected onto its grid before stacking. Pick it intentionally:
+
+| Variable | Native res | When to use as reference |
+|----------|-----------|--------------------------|
+| `pr` (CHIRPS) | 0.05° | **Default.** Finest grid in a typical plan; preserves rainfall detail. Coarser sources (AgERA5, NASA POWER) get upsampled to 0.05° — replicated values, not new information. |
+| `rsds` (AgERA5) | 0.1° | Use when you want honest coarse-grid simulations and don't want replicated values from upsampling. |
+| `rsds` (NASA POWER) | 0.5° | Almost never — too coarse for per-pixel crop modeling. |
+
+The aggeodata internal stacker resamples with **bilinear** interpolation and
+doesn't expose a knob for nearest-neighbor. If you need nearest (no smoothing,
+e.g. for categorical or non-physical fields), bypass the auto-builder: stack the
+raw files yourself via `stack_datasets` in the `geospatial-cube-processor` skill
+with `target_resolution="finest"` and `resampling_method="nearest"`, then point
+`weather_path` at the resulting NetCDF and run `ag-cube-cm` in `with_cubes` mode.
+
 ### Step 4 — Validate the config
 
 ```bash
@@ -239,6 +257,55 @@ Add `--dry-run` first if the user wants to see what would happen without executi
 
 For `full_pipeline` mode this can take 10-60 minutes depending on area size and ncores.
 Intermediate outputs (climate/soil files) are cached — re-runs skip completed steps.
+
+### Manual datacube fixes
+
+The auto-builder inside `ag-cube-cm` is robust for typical small-area runs, but a
+few failure modes show up at country-scale extents or with mixed-resolution
+sources. If you hit one of these symptoms between Step 5 and Step 6, intervene
+on the intermediate cube before re-running `ag-cube-cm` in `with_cubes` mode.
+
+**Boundary NaN after `xr.interp`** — when the reference grid extends slightly
+beyond the source grid (e.g. extent rounding), `xr.interp` returns NaN on the
+edge pixels. `bounds_error=False` only suppresses scipy errors; the NaNs come
+from the linear interpolant having no neighbors. Fill them with the nearest
+valid value along both axes:
+
+```python
+resampled = da.interp(y=ref_y, x=ref_x, method="linear")
+resampled = resampled.ffill("y").bfill("y").ffill("x").bfill("x")
+```
+
+**Stacker SIGABRT on large file counts** — at ~1000+ input GeoTIFFs the
+rasterio warp path can hit a heap corruption ("unaligned tcache chunk") and the
+process dies with SIGABRT. Bypass it with a pure-xarray stack:
+
+```python
+import xarray as xr
+import rioxarray  # registers the .rio accessor
+
+ds = xr.open_mfdataset(file_paths, combine="by_coords", parallel=True)
+ds = ds.rio.write_crs("EPSG:4326")   # mfdataset drops CRS metadata — re-attach
+ds.to_netcdf(out_path, engine="netcdf4")
+```
+
+The `write_crs` call is mandatory — without it, downstream tools see
+`ds.rio.crs == None` and silently misalign.
+
+**Time coordinate is all zeros after manual stack** — when input files lack CF
+time metadata, `open_mfdataset` produces a zero-valued time index that slices
+wrong without ever raising. Validate with an explicit dtype check, then rebuild:
+
+```python
+assert ds.time.dtype.kind == "M", "time coord is not datetime — reassign via cftime_range"
+
+ds = ds.assign_coords(
+    time=xr.cftime_range("2021-01-01", periods=ds.sizes["time"], freq="D")
+              .to_datetimeindex()
+)
+```
+
+For monthly cubes use `freq="MS"`, annual `freq="YS"`.
 
 ### Step 6 — Interpret results
 
@@ -335,17 +402,44 @@ If either assertion fails, stop and rebuild the soil cube on the climate extent.
 
 ## Common issues
 
+### `DSSAT returned rc=99` — diagnose in this order
+
+`rc=99` is DSSAT's generic "something went wrong" exit code. The accompanying
+message ("Crop code incompatible") is often misleading — the real cause can be
+any of the four below. Work through them from cheapest to most expensive; most
+rc=99 cases are caught in the first two.
+
+1. **Empty weather DataFrame** — the pixel had NaN weather (common at grid
+   edges where the climate cube doesn't cover the soil cube extent). DSSAT
+   reads zero rows and bails out.
+   **Test:** `df_wth.dropna()` returns 0 rows. Expected at the edges; suspicious
+   in the interior — check climate-cube extent vs soil-cube extent.
+2. **Working path contains a space** — DSSATPRO's whitespace-delimited parser
+   corrupts the M-line and reports a fake "crop code incompatible".
+   **Test:** `print(working_path)`. If it contains a space (`OneDrive - CGIAR`,
+   `Program Files`, …), move to a space-free path like `D:/dssat_work` or
+   `/tmp/dssat_runs`.
+3. **Wrong cultivar module** — e.g. WHCER cultivars (`IB1487`) under the
+   bundled WHAPS048 binary, or a maize cultivar passed to a wheat run.
+   **Test:** open the generated X-file, check the `SMODEL` line matches the
+   cultivar's expected module (`WHAPS048` for wheat WHAPS, `MZCER048` for maize,
+   `CRGRO048` for legumes). For wheat, use `IB1015`, `IB0001`, `IB0002`, or
+   `IB1500`.
+4. **DSSAT binary missing or not on PATH** — `dssat_path` in config is wrong,
+   or DSSAT isn't installed.
+   **Test:** `which dscsm048` (Linux/Mac) or check the binary at the configured
+   `dssat_path`/`bin_path`.
+
+### Other failure modes
+
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | All pixels skipped | Grid edges have NaN from coarser AgERA5/SoilGrids | Expected — increase `max_pixels` or check interior pixels |
-| All pixels skipped: soil slice is all NaN | Soil cube coordinates are in projected metres, not degrees — `sel(y,x)` lands outside the data | Rebuild soil cube with `crs='+proj=igh ...'` and `target_crs='EPSG:4326'` (see Soil cube creation above) |
+| All pixels skipped: soil slice is all NaN | Soil cube coordinates are in projected metres, not degrees — `sel(y,x)` lands outside the data | Rebuild soil cube with `crs='+proj=igh ...'` and `target_crs='EPSG:4326'` (see `soil-data-download` skill) |
 | All pixels skipped: `no valid index for a 0-dimensional object` | Soil cube is in flat format (`clay_0-5cm_mean`) — needs reshaping | Run `reshape_flat_soil_cube(ds).to_netcdf(...)` then re-run simulation |
-| `DSSAT finished without Summary.OUT (rc=99): Crop code incompatible` | Cultivar belongs to WHCER model but bundled binary is WHAPS048 | Use a WHAPS048 cultivar: IB1015, IB0001, IB0002, or IB1500 for wheat |
-| `DSSAT path not found` | DSSAT not installed or `dssat_path` wrong | Set `dssat_path` in config or ensure DSSAT is on PATH |
 | `UnicodeEncodeError` | Non-ASCII chars in output path on Windows | Use ASCII-only paths |
 | `ModuleNotFoundError: mcp` | mcp package not installed | `pip install mcp` |
 | Slow simulation | `ncores` too low | Set `ncores` to number of physical CPU cores |
-| `working_path` error | Path has spaces | Use `D:/dssat_test` style, no spaces |
 
 ---
 
