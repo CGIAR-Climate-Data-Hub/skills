@@ -133,23 +133,26 @@ Full signature is in [`references/python_api.md`](references/python_api.md).
 
 ### Path B — YAML pipeline (use when integrating with a climate config)
 
-The `aggeodata` YAML pipeline accepts a `SOIL` block. **`GENERAL.reference_variable`
+The `aggeodata` YAML pipeline accepts a `soil` block. **`general.reference_variable`
 must be a non-null soil layer name** — use `sand` as the default. Setting it to
 `null` or omitting it raises `reference_variable: non-null string required`.
 
+Section keys are lowercase canonical (`spatial_info`, `soil`, `general`,
+`paths`); the historical UPPERCASE keys are still accepted as aliases.
+
 ```yaml
-SPATIAL_INFO:
+spatial_info:
   extent: [{XMIN}, {YMIN}, {XMAX}, {YMAX}]
-SOIL:
+soil:
   enabled:   true
   variables: [clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500]
   depths:    ["0-5", "5-15", "15-30", "30-60", "60-100"]
-GENERAL:
+general:
   suffix:             "{SUFFIX}"
   ncores:             1
   task:               "download"
   reference_variable: sand    # non-null; any enabled soil layer is fine
-PATHS:
+paths:
   output_path: "{OUTPUT}/soil_raw"
 ```
 
@@ -160,7 +163,7 @@ from aggeodata.pipelines.download import run_download
 run_download("{OUTPUT}/config.yaml")
 ```
 
-`DATES` and `CLIMATE` may be omitted entirely for soil-only configs.
+`dates` and `climate` may be omitted entirely for soil-only configs.
 
 ## Step 4 — Build the soil cube (optional but usually wanted)
 
@@ -248,7 +251,7 @@ Shape: {DIMS}   (y, x, depth, variable as appropriate)
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `reference_variable: non-null string required` | Used the climate YAML schema with `SOIL.enabled: true` but didn't set `GENERAL.reference_variable` | Set `GENERAL.reference_variable: sand` (or another enabled soil layer) |
+| `reference_variable: non-null string required` | Used the climate YAML schema with `soil.enabled: true` but didn't set `general.reference_variable` | Set `general.reference_variable: sand` (or another enabled soil layer) |
 | Cube coordinates are huge numbers (e.g. `y = 1500000`) | The builder kept SoilGrids' native projected CRS | Pass `crs=IGH` and `target_crs="EPSG:4326"` explicitly to `SoilDataCubeBuilder` |
 | `no valid index for a 0-dimensional object` when sampling the cube | Cube is in flat format (`clay_0-5cm_mean`, etc.) | Run `reshape_flat_soil_cube(ds).to_netcdf(...)` then reopen |
 | Downloads fail with HTTP 403 / connection errors | SoilGrids rate limit | Wait, then retry — `SoilGridsDownloader` resumes; existing tiles are skipped |

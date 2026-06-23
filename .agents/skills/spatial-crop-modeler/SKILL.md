@@ -158,6 +158,15 @@ management:
 ```
 
 **`full_pipeline` template:**
+
+The `climate:` block reuses the **same nested `variables:` shape** as the
+`climate-data-download` skill (one entry per CF variable, each with a
+`source` and any per-variable knobs like `gee_project` / `gee_dataset_id`).
+If you already have a working climate block from that skill, paste it under
+`climate:` here and you're done — no translation needed. The legacy flat
+`sources: {pr: chirps, ...}` form with a top-level `gee_project:` is still
+accepted but emits a `DeprecationWarning`; prefer the nested form.
+
 ```yaml
 mode: full_pipeline
 
@@ -172,14 +181,23 @@ dates:
   end:   "2021-12-31"
 
 climate:
-  sources:
-    pr:     chirps     # or: agera5, nasa_power, gee
-    tasmax: chirts     # or: agera5, nasa_power, gee
-    tasmin: chirts     # or: agera5, nasa_power, gee
-    rsds:   agera5     # or: nasa_power (no key, 0.5 deg), gee
-    # For GEE: set `source: gee` on any variable (+ optional `gee_project`).
-    # See climate-data-download skill for the full GEE config.
-  ncores:             2
+  # Same shape as the climate-data-download skill's CLIMATE section.
+  # Each entry under `variables` is a CF variable with per-variable knobs.
+  variables:
+    pr:
+      source: chirps       # or: agera5, nasa_power, gee
+    tasmax:
+      source: chirts       # or: agera5, nasa_power, gee
+    tasmin:
+      source: chirts
+    rsds:
+      source: agera5       # or: nasa_power (no key, 0.5 deg), gee
+    # GEE example — set `source: gee` and the cloud project per variable:
+    # pr:
+    #   source: gee
+    #   gee_project: ee-myproject
+    #   gee_dataset_id: UCSB-CHG/CHIRPS/DAILY   # optional; pulls the default if omitted
+  ncores:             2    # GEE requires ncores: 1 — HDF5 writer is not parallel-safe
   agera5_version:     "2_0"
   reference_variable: pr   # default: finest grid in the plan — see "Reference variable choice" below
 
@@ -252,49 +270,22 @@ Intermediate outputs (climate/soil files) are cached — re-runs skip completed 
 ### Manual datacube fixes
 
 The `ag-cube-cm` auto-builder is robust for typical small-area runs but a few
-failure modes show up at country scale or with mixed-resolution sources. If
-you hit one of these between Step 5 and Step 6, fix the intermediate cube then
-re-run `ag-cube-cm` in `with_cubes` mode.
+failure modes show up at country scale or with mixed-resolution sources.
+Two routes when the auto-builder misbehaves:
 
-**Boundary NaN after `xr.interp`** — when the reference grid extends slightly
-beyond the source grid, `xr.interp` returns NaN on edge pixels (`bounds_error=False`
-only suppresses scipy errors; the NaNs come from the linear interpolant having no
-neighbors). Fill with the nearest valid value along both axes:
-
-```python
-resampled = da.interp(y=ref_y, x=ref_x, method="linear")
-resampled = resampled.ffill("y").bfill("y").ffill("x").bfill("x")
-```
-
-**Stacker SIGABRT on large file counts** — at ~1000+ input GeoTIFFs the
-rasterio warp path can hit a heap corruption ("unaligned tcache chunk") and the
-process dies with SIGABRT. Bypass it with a pure-xarray stack:
-
-```python
-import xarray as xr
-import rioxarray  # registers the .rio accessor
-
-ds = xr.open_mfdataset(file_paths, combine="by_coords", parallel=True)
-ds = ds.rio.write_crs("EPSG:4326")   # mfdataset drops CRS metadata — re-attach
-ds.to_netcdf(out_path, engine="netcdf4")
-```
-
-The `write_crs` call is mandatory — without it, downstream tools see
-`ds.rio.crs == None` and silently misalign.
-
-**Time coordinate is all zeros after manual stack** — when input files lack CF
-time metadata, the time index is zero-valued and slices wrong silently. Rebuild:
-
-```python
-assert ds.time.dtype.kind == "M", "time coord is not datetime — reassign via cftime_range"
-
-ds = ds.assign_coords(
-    time=xr.cftime_range("2021-01-01", periods=ds.sizes["time"], freq="D")
-              .to_datetimeindex()
-)
-```
-
-For monthly cubes use `freq="MS"`, annual `freq="YS"`.
+- **Preferred** — invoke the `geospatial-cube-processor` skill and call
+  `stack_datasets(...)` with explicit `target_resolution` and
+  `resampling_method`. It uses a pure xarray + rioxarray path
+  (`reproject_match`) that side-steps the rasterio-warp heap corruption,
+  the boundary NaN issue, and the missing-CF-time problem all at once.
+  Point `weather_path` at the resulting NetCDF and re-run `ag-cube-cm` in
+  `with_cubes` mode.
+- **Patch in place** — if you want to keep the auto-builder, see
+  [`references/troubleshooting.md`](references/troubleshooting.md)
+  ([raw](https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/spatial-crop-modeler/references/troubleshooting.md))
+  for the three specific fixes (boundary NaN after `xr.interp`, stacker
+  SIGABRT on ~1000+ input files, all-zero time coordinate after a manual
+  stack).
 
 ### Step 6 — Interpret results
 
@@ -444,44 +435,22 @@ If either assertion fails, stop and rebuild the soil cube on the climate extent.
 
 ## Common issues
 
-### `DSSAT returned rc=99` — diagnose in this order
+When a run fails, consult [`references/troubleshooting.md`](references/troubleshooting.md)
+([raw](https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/spatial-crop-modeler/references/troubleshooting.md)).
+It covers:
 
-`rc=99` is DSSAT's generic "something went wrong" exit code. The accompanying
-message ("Crop code incompatible") is often misleading — the real cause can be
-any of the four below. Work through them from cheapest to most expensive; most
-rc=99 cases are caught in the first two.
+- **`DSSAT returned rc=99`** — the four causes ordered cheapest-first
+  (empty weather frame at grid edges, spaces in `working_path`, wrong
+  cultivar module, missing binary).
+- **All pixels skipped** — soil-cube CRS in metres, flat-format soil cube
+  needing reshape, climate/soil extent mismatch.
+- **Other** — `UnicodeEncodeError` on Windows paths, `ModuleNotFoundError`
+  for `mcp`, slow runs from low `ncores`.
 
-1. **Empty weather DataFrame** — the pixel had NaN weather (common at grid
-   edges where the climate cube doesn't cover the soil cube extent). DSSAT
-   reads zero rows and bails out.
-   **Test:** `df_wth.dropna()` returns 0 rows. Expected at the edges; suspicious
-   in the interior — check climate-cube extent vs soil-cube extent.
-2. **Working path contains a space** — DSSATPRO's whitespace-delimited parser
-   corrupts the M-line and reports a fake "crop code incompatible".
-   **Test:** `print(working_path)`. If it contains a space (`OneDrive - CGIAR`,
-   `Program Files`, …), move to a space-free path like `D:/dssat_work` or
-   `/tmp/dssat_runs`.
-3. **Wrong cultivar module** — e.g. WHCER cultivars (`IB1487`) under the
-   bundled WHAPS048 binary, or a maize cultivar passed to a wheat run.
-   **Test:** open the generated X-file, check the `SMODEL` line matches the
-   cultivar's expected module (`WHAPS048` for wheat WHAPS, `MZCER048` for maize,
-   `CRGRO048` for legumes). For wheat, use `IB1015`, `IB0001`, `IB0002`, or
-   `IB1500`.
-4. **DSSAT binary missing or not on PATH** — `dssat_path` in config is wrong,
-   or DSSAT isn't installed.
-   **Test:** `which dscsm048` (Linux/Mac) or check the binary at the configured
-   `dssat_path`/`bin_path`.
-
-### Other failure modes
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| All pixels skipped | Grid edges have NaN from coarser AgERA5/SoilGrids | Expected — increase `max_pixels` or check interior pixels |
-| All pixels skipped: soil slice is all NaN | Soil cube coordinates are in projected metres, not degrees — `sel(y,x)` lands outside the data | Rebuild soil cube with `crs='+proj=igh ...'` and `target_crs='EPSG:4326'` (see `soil-data-download` skill) |
-| All pixels skipped: `no valid index for a 0-dimensional object` | Soil cube is in flat format (`clay_0-5cm_mean`) — needs reshaping | Run `reshape_flat_soil_cube(ds).to_netcdf(...)` then re-run simulation |
-| `UnicodeEncodeError` | Non-ASCII chars in output path on Windows | Use ASCII-only paths |
-| `ModuleNotFoundError: mcp` | mcp package not installed | `pip install mcp` |
-| Slow simulation | `ncores` too low | Set `ncores` to number of physical CPU cores |
+For stacker-related failures (SIGABRT, boundary NaN, all-zero time coord),
+the troubleshooting doc also describes the in-place fixes — but
+`geospatial-cube-processor`'s `stack_datasets` is the cleaner path; see
+the "Manual datacube fixes" note in Step 5 above.
 
 ---
 
@@ -496,5 +465,8 @@ rc=99 cases are caught in the first two.
 
 ---
 
-*Evaluation examples: [references/evals.json](references/evals.json)*  
+*Evaluation examples: [references/evals.json](references/evals.json)*
 *Agent configuration reference: [references/agent-config.md](references/agent-config.md)*
+*Troubleshooting (rc=99, skipped pixels, manual datacube fixes):
+[references/troubleshooting.md](references/troubleshooting.md)
+([raw](https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/spatial-crop-modeler/references/troubleshooting.md))*

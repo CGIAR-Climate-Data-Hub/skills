@@ -189,18 +189,25 @@ extent = [round(v, 4) for v in gdf.total_bounds.tolist()]
 
 ### Generate the YAML config
 
-Build the config file from the confirmed plan. Use CF variable names as keys under `CLIMATE.variables`. Write the configuration to file using `write_to_file`.
+Build the config file from the confirmed plan. Use CF variable names as keys under `climate.variables`. Write the configuration to file using `write_to_file`.
+
+Section keys are **lowercase canonical** (`dates`, `spatial_info`, `climate`,
+`soil`, `general`, `paths`). The historical UPPERCASE keys (`DATES`,
+`SPATIAL_INFO`, …) are still accepted as input aliases so old YAMLs keep
+working, but new configs should use the lowercase form — that's the same
+shape consumed by `spatial-crop-modeler`'s `full_pipeline`, so blocks
+copy-paste cleanly between the two skills.
 
 ```yaml
-DATES:
+dates:
   starting_date: "{START}"   # YYYY-MM-DD
   ending_date:   "{END}"
 
-SPATIAL_INFO:
+spatial_info:
   spatial_file: null
   extent: [{XMIN}, {YMIN}, {XMAX}, {YMAX}]  # from extent resolution above
 
-CLIMATE:
+climate:
   variables:
     pr:
       source: chirps
@@ -211,16 +218,16 @@ CLIMATE:
     rsds:
       source: nasa_power   # or agera5 — per user confirmation
 
-SOIL:
+soil:
   enabled: false
 
-GENERAL:
+general:
   suffix:         "{SUFFIX}"   # short label, no spaces
   ncores:         1            # always 1 when chirps or chirts is present
   task:           "download"
   agera5_version: "2_0"
 
-PATHS:
+paths:
   output_path: "{OUTPUT}"
 ```
 
@@ -241,15 +248,15 @@ PATHS:
 **GEE YAML template** (when user selects GEE):
 
 ```yaml
-DATES:
+dates:
   starting_date: "{START}"
   ending_date:   "{END}"
 
-SPATIAL_INFO:
+spatial_info:
   spatial_file: null
   extent: [{XMIN}, {YMIN}, {XMAX}, {YMAX}]
 
-CLIMATE:
+climate:
   variables:
     pr:
       source: gee
@@ -264,15 +271,15 @@ CLIMATE:
       source: gee
       gee_project: "{GEE_PROJECT}"
 
-SOIL:
+soil:
   enabled: false
 
-GENERAL:
+general:
   suffix:   "{SUFFIX}"
   ncores:   1            # GEE requires ncores=1 — HDF5 writer is not parallel-safe
   task:     "download"
 
-PATHS:
+paths:
   output_path: "{OUTPUT}"
 ```
 
@@ -281,8 +288,8 @@ Repeat `gee_project` under each variable — it is a per-variable field in the s
 
 ### `reference_variable` (required, never `null`)
 
-`GENERAL.reference_variable` is a non-null string identifying one of the enabled
-`CLIMATE.variables` (default: `pr` if precipitation is present, otherwise the first
+`general.reference_variable` is a non-null string identifying one of the enabled
+`climate.variables` (default: `pr` if precipitation is present, otherwise the first
 listed variable). Climate-only YAMLs always have at least one valid choice here.
 
 For **soil data** (SoilGrids), don't extend this pipeline — use the dedicated
