@@ -247,7 +247,15 @@ workflow. The other four are delegated sub-skills:
   Use D:/dssat_work, never D:/OneDrive - CGIAR/... for working_path. Output NetCDFs can go anywhere.
 - If the user selects GEE for ANY climate variable, force climate.ncores=1 in the YAML.
   GEE writes per-day GeoTIFFs through HDF5 without parallel I/O — ncores>1 crashes the model.
-- After the simulation completes (HWAM NetCDF produced), build a dashboard:
+- After the simulation completes (HWAM NetCDF produced), FIRST run Step 7 quality
+  gate from spatial-crop-modeler/SKILL.md. The gate computes ok / skipped / failed
+  fractions and mean HWAM and raises a RuntimeError if any threshold fails.
+  If it raises: STOP. Report the gate output verbatim to the user, inspect the
+  spatial pattern of skipped/failed pixels, propose the concrete fix (water-body
+  bbox, wrong planting season, grid mismatch, etc.), and wait for confirmation.
+  Do NOT proceed to dashboards or notebooks until the gate passes or the user
+  explicitly overrides it.
+- ONLY after the gate passes, build the dashboard:
     a. Use geospatial-cube-processor to mask + summarize the climate cube to a CSV
        (per admin level 1 or full country, depending on bbox size).
     b. Use climate-dashboard on that CSV to produce the climate charts + KPI cards.

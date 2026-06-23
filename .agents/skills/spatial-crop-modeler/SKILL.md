@@ -64,12 +64,7 @@ pip install "ag-cube-cm[models] @ git+https://github.com/anaguilarar/ag-cube-cm.
 ag-cube-cm --version
 ```
 
-**Install block B** — aggeodata missing:
-```bash
-pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git"
-```
-
-**Install block C** — mcp missing (bundled in aggeodata extras, but can install standalone):
+**Install block B/C** — aggeodata or mcp missing (mcp ships inside aggeodata's extras):
 ```bash
 pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git"
 ```
@@ -182,12 +177,8 @@ climate:
     tasmax: chirts     # or: agera5, nasa_power, gee
     tasmin: chirts     # or: agera5, nasa_power, gee
     rsds:   agera5     # or: nasa_power (no key, 0.5 deg), gee
-    # GEE example (no rate limits, requires earthengine authenticate):
-    # pr:     gee
-    # tasmax: gee
-    # tasmin: gee
-    # rsds:   gee
-    # gee_project: "my-gee-project"   # omit for legacy accounts
+    # For GEE: set `source: gee` on any variable (+ optional `gee_project`).
+    # See climate-data-download skill for the full GEE config.
   ncores:             2
   agera5_version:     "2_0"
   reference_variable: pr   # default: finest grid in the plan — see "Reference variable choice" below
@@ -260,16 +251,15 @@ Intermediate outputs (climate/soil files) are cached — re-runs skip completed 
 
 ### Manual datacube fixes
 
-The auto-builder inside `ag-cube-cm` is robust for typical small-area runs, but a
-few failure modes show up at country-scale extents or with mixed-resolution
-sources. If you hit one of these symptoms between Step 5 and Step 6, intervene
-on the intermediate cube before re-running `ag-cube-cm` in `with_cubes` mode.
+The `ag-cube-cm` auto-builder is robust for typical small-area runs but a few
+failure modes show up at country scale or with mixed-resolution sources. If
+you hit one of these between Step 5 and Step 6, fix the intermediate cube then
+re-run `ag-cube-cm` in `with_cubes` mode.
 
 **Boundary NaN after `xr.interp`** — when the reference grid extends slightly
-beyond the source grid (e.g. extent rounding), `xr.interp` returns NaN on the
-edge pixels. `bounds_error=False` only suppresses scipy errors; the NaNs come
-from the linear interpolant having no neighbors. Fill them with the nearest
-valid value along both axes:
+beyond the source grid, `xr.interp` returns NaN on edge pixels (`bounds_error=False`
+only suppresses scipy errors; the NaNs come from the linear interpolant having no
+neighbors). Fill with the nearest valid value along both axes:
 
 ```python
 resampled = da.interp(y=ref_y, x=ref_x, method="linear")
@@ -293,8 +283,7 @@ The `write_crs` call is mandatory — without it, downstream tools see
 `ds.rio.crs == None` and silently misalign.
 
 **Time coordinate is all zeros after manual stack** — when input files lack CF
-time metadata, `open_mfdataset` produces a zero-valued time index that slices
-wrong without ever raising. Validate with an explicit dtype check, then rebuild:
+time metadata, the time index is zero-valued and slices wrong silently. Rebuild:
 
 ```python
 assert ds.time.dtype.kind == "M", "time coord is not datetime — reassign via cftime_range"
@@ -322,13 +311,66 @@ mean_yield = ds["HWAM"].mean(dim=["planting_window", "year"])
 mean_yield.plot(cmap="YlGn")
 ```
 
-**Typical summary metrics to report:**
+**Typical summary metrics to report** (match the NetCDF's `flag.long_name = "0=ok 1=failed 2=no_data"`):
 ```
-pixels_ok      : N  (pixels where DSSAT ran successfully)
-pixels_skipped : N  (pixels with NaN weather or soil — expected at grid edges)
-pixels_failed  : N  (DSSAT runtime errors — investigate if > 5% of ok+failed)
-mean HWAM      : X kg/ha
+pixels_ok       : N  flag=0  (DSSAT ran and produced Summary.OUT)
+pixels_failed   : N  flag=1  (DSSAT ran but produced no output — rc=99, wrong season, etc.)
+pixels_no_data  : N  flag=2  (NaN weather or soil — expected at grid edges / water bodies)
+mean HWAM       : X kg/ha    (over flag=0 pixels)
 ```
+
+### Step 7 — Quality gate (mandatory; stops before visualization)
+
+`ag-cube-cm` exits cleanly even when the simulation produced essentially NaN
+results — bbox over water, planting in the wrong season, soil/climate grid
+mismatch. **A clean exit code is not a quality signal.** Always run this gate
+before invoking any downstream visualization, dashboard, or notebook skill:
+
+```python
+import xarray as xr
+import numpy as np
+
+ds = xr.open_dataset("{OUTPUT}/yield_{SUFFIX}.nc")
+# Flag convention (from ds.flag.long_name): 0=ok, 1=failed, 2=no_data.
+total      = ds.flag.size
+n_ok       = int((ds.flag.values == 0).sum())
+n_failed   = int((ds.flag.values == 1).sum())
+n_no_data  = int((ds.flag.values == 2).sum())
+mean_hwam  = float(np.nanmean(ds.HWAM.where(ds.flag == 0).values)) if n_ok else 0.0
+
+ok_frac   = n_ok / total
+fail_frac = n_failed / max(n_ok + n_failed, 1)
+
+# Defaults catch catastrophic failure only. Override per study when justified —
+# legumes legitimately yield lower, so drop MIN_MEAN_HWAM to ~150 for beans.
+MIN_OK_FRACTION, MAX_FAIL_FRACTION, MIN_MEAN_HWAM = 0.20, 0.50, 200
+
+checks = [
+    ("ok fraction",   ok_frac,   ok_frac   >= MIN_OK_FRACTION),
+    ("fail fraction", fail_frac, fail_frac <= MAX_FAIL_FRACTION),
+    ("mean HWAM",     mean_hwam, mean_hwam >= MIN_MEAN_HWAM),
+]
+print(f"ok {n_ok}/{total} ({ok_frac:.1%})  failed {n_failed} ({fail_frac:.1%})  no_data {n_no_data}  mean HWAM {mean_hwam:.0f} kg/ha")
+for name, val, passed in checks:
+    print(f"  {name:14s} = {val:8.3f}  {'PASS' if passed else 'FAIL'}")
+
+if not all(p for *_, p in checks):
+    raise RuntimeError(
+        "Quality gate FAILED — do NOT proceed to dashboards or notebooks until "
+        "diagnosed. Probable causes, ordered: (1) bbox over water body — soil "
+        "and rsds are NaN over water; (2) wrong planting season for the region; "
+        "(3) soil/climate grid mismatch — see 'Manual datacube fixes' above; "
+        "(4) cultivar incompatible with the climate."
+    )
+print("Quality gate PASSED.")
+```
+
+When the gate raises, **STOP**. Surface the printout verbatim, inspect the
+spatial pattern of `flag==1` / `flag==2` pixels (water-body cluster on one
+side? failures concentrated in a year → wrong season?), propose a concrete
+fix, and wait for confirmation. Do not invoke `climate-dashboard`,
+`notebook-plots`, or any visualization skill until the gate passes or the user
+explicitly overrides it.
 
 ---
 
@@ -449,9 +491,8 @@ rc=99 cases are caught in the first two.
 - Wait for user confirmation before executing
 - Report progress at each stage (download, build, simulate)
 - Always report the final pixel summary (ok/skipped/failed) and mean HWAM
-- If pixels_failed > 5% of (ok + failed), investigate and suggest next steps
-- Offer a quick matplotlib yield map at the end
-
+- Run Step 7 quality gate before anything visual; if it raises, halt and diagnose
+- Offer a quick matplotlib yield map at the end (only after the gate passes)
 
 ---
 
