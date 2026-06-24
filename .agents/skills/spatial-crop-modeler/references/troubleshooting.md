@@ -32,21 +32,65 @@ resampled = da.interp(y=ref_y, x=ref_x, method="linear")
 resampled = resampled.ffill("y").bfill("y").ffill("x").bfill("x")
 ```
 
-**Stacker SIGABRT on large file counts** — at ~1000+ input GeoTIFFs the
-rasterio warp path can hit a heap corruption ("unaligned tcache chunk") and the
-process dies with SIGABRT. Bypass it with a pure-xarray stack:
+**Stacker signal-abort on large file counts (SIGABRT or SIGSEGV)** — at ~800+
+input files per variable the rasterio warp path can hit heap corruption and the
+process dies with SIGABRT or SIGSEGV (signal type varies by allocator version;
+~1000 is *not* a reliable threshold). Bypass it with a pure-xarray stack.
+
+CHIRPS and CHIRTS daily files require two extra fixes:
+1. Every file stores `date=0` (integer zero) instead of the real date.
+2. Slightly different float y-coordinates across files cause `join='outer'` (the
+   `open_mfdataset` default) to union all y values, silently doubling the grid
+   (e.g. 35 → 70 rows for a Honduras bbox). Fix: `join='override'`.
 
 ```python
+import os, re
 import xarray as xr
 import rioxarray  # registers the .rio accessor
+from datetime import datetime
 
-ds = xr.open_mfdataset(file_paths, combine="by_coords", parallel=True)
-ds = ds.rio.write_crs("EPSG:4326")   # mfdataset drops CRS metadata — re-attach
-ds.to_netcdf(out_path, engine="netcdf4")
+def stack_daily_files(file_paths: list) -> xr.Dataset:
+    """Stack many daily NetCDF/GeoTIFF files; handles CHIRPS/CHIRTS quirks."""
+    file_paths = sorted(file_paths)       # chronological by filename
+    ds = xr.open_mfdataset(
+        file_paths,
+        combine="by_coords",
+        join="override",   # prevents float y-coord union from doubling y dim
+        parallel=True,
+    )
+    # CHIRPS/CHIRTS: every file has date=0 — rebuild from YYYY.MM.DD in filename
+    if ds.time.dtype.kind != "M":
+        dates = []
+        for f in file_paths:
+            m = re.search(r'(\d{4})[.\-_](\d{2})[.\-_](\d{2})', os.path.basename(f))
+            if m:
+                dates.append(datetime(int(m.group(1)), int(m.group(2)), int(m.group(3))))
+        if dates:
+            ds = ds.assign_coords(time=dates)
+    ds = ds.rio.write_crs("EPSG:4326")    # mfdataset drops CRS metadata — re-attach
+    return ds
 ```
 
-The `write_crs` call is mandatory — without it, downstream tools see
+The `join="override"` line is the critical one: omitting it silently doubles the
+grid. The `write_crs` call is mandatory — without it downstream tools see
 `ds.rio.crs == None` and silently misalign.
+
+**Multiple grid-mapping variables after merging climate sources** — after
+combining CHIRPS, CHIRTS, and AgERA5 datasets with `xr.merge`, each source
+carries its own `spatial_ref` or `crs` variable. `rioxarray` raises
+`RioXarrayError: Multiple grid mappings exist` on the merged dataset. Drop the
+duplicates before writing:
+
+```python
+# Drop duplicate spatial_ref / crs variables kept by xr.merge
+for v in list(merged.data_vars):
+    if v in ("spatial_ref", "crs"):
+        merged = merged.drop_vars(v)
+# Strip grid_mapping attributes so rioxarray picks no mapping at all
+for v in list(merged.data_vars):
+    merged[v].attrs.pop("grid_mapping", None)
+merged.to_netcdf(out_path, engine="netcdf4")
+```
 
 **Time coordinate is all zeros after manual stack** — when input files lack CF
 time metadata, the time index is zero-valued and slices wrong silently. Rebuild:
@@ -99,6 +143,7 @@ rc=99 cases are caught in the first two.
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | All pixels skipped | Grid edges have NaN from coarser AgERA5/SoilGrids | Expected — increase `max_pixels` or check interior pixels |
+| Soil/climate grid mismatch — resolution or CRS differ | SoilGrids (~0.002°) is ~25× finer than CHIRPS (0.05°) and may carry a different CRS; ag-cube-cm requires them on the same grid | Reproject soil to CHIRPS CRS and resolution in one step: `soil.rio.write_crs("EPSG:4326").rio.reproject_match(weather_ds, resampling="bilinear").to_netcdf("soil_resampled.nc")` — then update `soil_path` in the config |
 | All pixels skipped: soil slice is all NaN | Soil cube coordinates are in projected metres, not degrees — `sel(y,x)` lands outside the data | Rebuild soil cube with `crs='+proj=igh ...'` and `target_crs='EPSG:4326'` (see `soil-data-download` skill) |
 | All pixels skipped: `no valid index for a 0-dimensional object` | Soil cube is in flat format (`clay_0-5cm_mean`) — needs reshaping | Run `reshape_flat_soil_cube(ds).to_netcdf(...)` then re-run simulation |
 | `UnicodeEncodeError` | Non-ASCII chars in output path on Windows | Use ASCII-only paths |

@@ -128,6 +128,15 @@ Do not generate any files until the user confirms.
 
 Generate the appropriate YAML config file and save it to the output directory.
 
+**`with_cubes` NetCDF format contract** — `ag-cube-cm` imposes these constraints on the weather NetCDF; violations surface only as runtime errors, so verify upfront:
+
+| Requirement | How to check / fix |
+|-------------|-------------------|
+| Dim names: `time`, `y`, `x` | `list(ds.dims)` — rename if `lat`/`lon` or `latitude`/`longitude` |
+| No `spatial_ref` / `crs` data vars | `ds.drop_vars([v for v in ds.data_vars if v in ("spatial_ref","crs")])` |
+| No `grid_mapping` attribute on vars | `da.attrs.pop("grid_mapping", None)` for each data variable |
+| CF datetime time coord | `ds.time.dtype.kind == "M"` — if integer zeros, see stacker fix in `troubleshooting.md` |
+
 **`with_cubes` template:**
 ```yaml
 mode: with_cubes
@@ -418,18 +427,34 @@ owns:
 - the flat-format reshape (`reshape_flat_soil_cube` for `clay_0-5cm_mean`-style cubes)
 - CRS + variable-completeness assertions
 
-Then add **one extra assertion** specific to crop modeling — soil and weather extents
-must overlap on both axes, or `ag-cube-cm` will skip every pixel:
+Then add **two extra checks** specific to crop modeling:
 
 ```python
 import xarray as xr
+import rioxarray
 soil    = xr.open_dataset("soil_<country>.nc")
 weather = xr.open_dataset("climate_<country>.nc")
+
+# 1. Extents must overlap — ag-cube-cm skips every pixel if they don't
 assert float(soil.y.min()) <= float(weather.y.max()), "Soil/weather Y extents don't overlap."
 assert float(soil.x.min()) <= float(weather.x.max()), "Soil/weather X extents don't overlap."
+
+# 2. Resolution and CRS must match the climate grid.
+#    SoilGrids (~0.002°) is ~25× finer than CHIRPS (0.05°) and may carry a
+#    different CRS. reproject_match fixes both in one step — it reprojects to
+#    the climate CRS and resamples to the climate resolution.
+soil_res    = abs(float(soil.rio.resolution()[0]))
+weather_res = abs(float(weather.rio.resolution()[0]))
+if abs(soil_res - weather_res) > weather_res * 0.1:
+    print(f"Soil res ({soil_res:.5f}°) differs from climate res ({weather_res:.5f}°) — reproject_match required.")
+    soil = soil.rio.write_crs("EPSG:4326")
+    soil = soil.rio.reproject_match(weather, resampling="bilinear")
+    soil.to_netcdf("soil_<country>_resampled.nc")
+    print("Saved soil_<country>_resampled.nc — update soil_path in your config.")
 ```
 
-If either assertion fails, stop and rebuild the soil cube on the climate extent.
+If the extent assertion fails, rebuild the soil cube on the climate extent.
+If the resolution block runs, point `soil_path` at the resampled file before running the simulation.
 
 ---
 
