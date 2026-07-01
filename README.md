@@ -30,6 +30,7 @@ Skills live in `skills/`. Install or update them via Claude Code's skill system.
 | [`notebook-plots`](#notebook-plots) | Visualization | Writes Plotly time-series and choropleth charts into an existing Jupyter notebook; also exports a standalone Plotly HTML |
 | [`climate-dashboard`](#climate-dashboard) | Visualization | Builds a self-contained interactive HTML dashboard (KPI cards, Chart.js charts, data table) from a climate CSV or NetCDF — no server needed |
 | [`gcf-pipeline`](#gcf-pipeline) | End-to-end pipeline | Full download → process → notebook + dashboard workflow in one conversation |
+| [`cdh-metadata`](#cdh-metadata) | Metadata authoring | Inspects a geospatial file and generates a valid YAML metadata record following the CGIAR Climate Data Hub standard |
 
 ---
 
@@ -201,6 +202,57 @@ See the dedicated how-to guides for your platform:
 
 All three guides share the same end-user experience: type one sentence describing what
 you need, confirm the plan, and get a Jupyter notebook + HTML dashboard as output.
+
+## cdh-metadata
+
+**Skill path:** `.agents/skills/cdh-metadata/`
+
+Inspects a geospatial file and generates a valid YAML metadata record following the
+[CGIAR Climate Data Hub (CDH) metadata standard](https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.1.0/schemas/core.schema.json).
+Supports GeoTIFF, NetCDF, Zarr, GeoPackage, Shapefile, FlatGeobuf, and Parquet.
+
+**What auto-extracts from the file:**
+
+| Extracted automatically | Always asked |
+|-------------------------|-------------|
+| Bounding box, CRS, spatial resolution | `id`, `title`, `description` |
+| Variable names, data types, nodata | License, contact (licensor), citation / DOI |
+| File size, media type | Data URLs, CDH domain |
+
+**CDH domains:** `adaptation` · `agricultural-production` · `boundaries` · `climate` · `hydrology` · `mitigation` · `socioeconomic`
+
+**Example:**
+
+```
+User: Create CDH metadata for D:/data/MapaForestal_2024.tif
+      Honduras National Forest Map 2024, published by ICF under CC-BY-4.0.
+      Contact: jgarcia@icf.gob.hn  DOI: 10.12345/forestal-2024
+      Domain: boundaries
+
+Skill: Inspected MapaForestal_2024.tif —
+         bbox: [-92.04, 12.98, -83.17, 16.52]  CRS: EPSG:4326
+         bands: 1  dtype: uint8  nodata: 255  size: 8.4 MB
+
+       ID:       mapa-forestal-hn-2024
+       Title:    Honduras National Forest Map 2024
+       License:  CC-BY-4.0
+       Spatial:  [-92.04, 12.98, -83.17, 16.52] — EPSG:4326
+       Domain:   boundaries
+       Output:   D:/data/mapa-forestal-hn-2024.yaml
+
+       Does this look right? I'll generate the YAML.
+```
+
+**Setup:** Uses `rasterio`, `xarray`, and `geopandas` — no `aggeodata` required.
+
+```bash
+pip install rasterio xarray geopandas pyyaml
+```
+
+**Trigger phrases:** "create metadata for", "generate CDH metadata", "document this raster",
+"write a YAML for CDH", "add my data to the Climate Data Hub", "help me fill the metadata fields"
+
+---
 
 ## Using skills together
 

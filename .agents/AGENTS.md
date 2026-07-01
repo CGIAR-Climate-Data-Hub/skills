@@ -31,6 +31,7 @@ All required API patterns are in the skill files.
 | Plot / chart / notebook from existing data | `.agents/skills/notebook-plots/SKILL.md` |
 | Spatial crop modeling / run crop model over a region | `.agents/skills/spatial-crop-modeler/SKILL.md` |
 | Build interactive climate dashboard | `.agents/skills/climate-dashboard/SKILL.md` |
+| Create / generate CDH metadata YAML for a dataset | `.agents/skills/cdh-metadata/SKILL.md` |
 
 ### Trigger phrases
 
@@ -48,6 +49,11 @@ any prompt implying fetching climate-only with no visualization or modeling. **N
 
 **spatial-crop-modeler**: "yield prediction", "run crop model", "simulate crop", "model [crop] in [country]",
 "estimate production", any prompt implying running a crop model spatially.
+
+**cdh-metadata**: "create metadata for", "generate CDH metadata", "write CDH metadata", "document this dataset",
+"document this raster", "document my NetCDF", "write a YAML for CDH", "generate a metadata record",
+"add my data to the Climate Data Hub", "prepare dataset for CDH", "help me fill the metadata fields",
+any prompt combining a geospatial file path with a documentation or cataloging intent.
 
 ### How to invoke a skill
 
