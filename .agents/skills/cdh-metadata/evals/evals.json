@@ -1,0 +1,93 @@
+{
+  "skill_name": "cdh-metadata",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I need to create CDH metadata for my forest cover map. The file is at D:/data/examples/MapaForestal_2024.tif — it's a classified raster showing forest types in Honduras for the year 2024, produced by ICF (Instituto Nacional de Conservacion y Desarrollo Forestal). License is CC-BY-4.0. No DOI yet. It will be hosted at https://digital-atlas.s3.amazonaws.com/cdh/data/mapa-forestal-2024/MapaForestal_2024.tif. My contact info: organization = Alliance of Bioversity International and CIAT, my name is Andres Aguilar, email andres.aguilar@cgiar.org. Please generate the CDH YAML metadata file.",
+      "expected_output": "A valid CDH YAML file written to disk named mapa-forestal-2024.yaml (or similar id). Must include: cdh_schema_version v0.1.0, id in lowercase-kebab-case, title and description for a Honduras forest map, license CC-BY-4.0, resource_type dataset, spatial bbox auto-extracted (~[-89.36, 12.98, -83.15, 16.52]) and crs EPSG:4326, spatial resolution auto-extracted (~8.983e-05 degrees), temporal for 2024, contact with licensor role (CIAT/Andres Aguilar), data asset with the provided HTTPS URL, media_type for GeoTIFF, cdh.domain including boundaries or climate or similar, processing with a source step, and created/updated set to today.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "yaml_file_written_to_disk",
+          "description": "A .yaml file was actually written to disk (not just shown in the conversation)"
+        },
+        {
+          "name": "contains_required_core_fields",
+          "description": "YAML contains all required fields: cdh_schema_version, id, title, description, license, resource_type, keywords, contact, created, updated, data"
+        },
+        {
+          "name": "bbox_extracted_from_file",
+          "description": "The bbox in spatial.bbox was auto-extracted from the GeoTIFF (approximately [-89.36, 12.98, -83.15, 16.52]) rather than left empty or wrong"
+        },
+        {
+          "name": "contact_has_licensor_role",
+          "description": "At least one contact entry includes 'licensor' in its roles list"
+        },
+        {
+          "name": "data_asset_has_location_url",
+          "description": "The data[] array contains at least one entry with a non-null locations[].url"
+        },
+        {
+          "name": "processing_has_source_step",
+          "description": "The processing[] array (if present) contains at least one step with id: source"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Help me document my crop model output for the CDH. The file is D:/data/examples/yield_dedza_bean.nc — it contains DSSAT-simulated bean grain yield (kg/ha) for Dedza district in Malawi, covering years 2000-2002 with 3 planting windows (Nov 15, Nov 29, Dec 13). The data was produced by the Alliance of Bioversity International and CIAT as part of a crop modeling project. License CC-BY-4.0. No DOI. It will be available at https://example.org/cdh/yield-dedza-bean-2000-2002.nc. Contact: Andres Aguilar, andres.aguilar@cgiar.org, organization Alliance of Bioversity International and CIAT. Please create the CDH metadata YAML.",
+      "expected_output": "A valid CDH YAML file written to disk. Must include: cdh_schema_version v0.1.0, id like yield-dedza-bean-2000-2002, title referencing bean yield simulation for Dedza Malawi, description mentioning DSSAT model, temporal start_date 2000 and end_date 2002 with annual or sub-annual resolution, spatial bbox approximately [33.67, -14.63, 34.15, -13.88], variables block with HWAM (grain yield kg/ha) and flag, dimensions block with year and planting_window, cdh.domain agricultural-production, resource_type dataset, contact with licensor, data asset with NC URL, media_type application/netcdf.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "yaml_file_written_to_disk",
+          "description": "A .yaml file was actually written to disk"
+        },
+        {
+          "name": "contains_required_core_fields",
+          "description": "YAML contains all required fields: cdh_schema_version, id, title, description, license, resource_type, keywords, contact, created, updated, data"
+        },
+        {
+          "name": "variables_block_present",
+          "description": "A variables: block is present listing HWAM (grain yield) at minimum"
+        },
+        {
+          "name": "temporal_covers_2000_2002",
+          "description": "temporal.start_date and end_date cover 2000–2002"
+        },
+        {
+          "name": "media_type_netcdf",
+          "description": "data[].media_type is 'application/netcdf'"
+        },
+        {
+          "name": "domain_is_agricultural",
+          "description": "cdh.domain includes agricultural-production"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Create CDH metadata for D:/data/examples/MapaForestal_2024.tif. I don't know much about it — just that it's a forest raster file for 2024 and I want to document it for the Climate Data Hub. The data is from ICF Honduras. Use CC-BY-4.0 license. Organization: ICF Honduras. I'll host it on S3 at s3://my-bucket/mapa-forestal/MapaForestal_2024.tif",
+      "expected_output": "A valid CDH YAML generated even with minimal user context. Claude should auto-extract all spatial info from the file, suggest reasonable values for title/description/id based on the filename and what it can infer, ask minimal clarifying questions or make reasonable assumptions, and produce a complete-enough YAML that can be edited later. The file should be written to disk. Key: the skill should not get stuck asking for too many fields — it should move forward with reasonable defaults and produce output.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "yaml_file_written_to_disk",
+          "description": "A .yaml file was actually written to disk despite minimal user input"
+        },
+        {
+          "name": "bbox_auto_extracted",
+          "description": "bbox was auto-extracted from the GeoTIFF rather than left empty"
+        },
+        {
+          "name": "skill_does_not_stall",
+          "description": "Claude produces a complete YAML rather than stopping to ask for every missing field individually"
+        },
+        {
+          "name": "s3_url_in_data_locations",
+          "description": "The S3 URL provided by the user appears in data[].locations"
+        }
+      ]
+    }
+  ]
+}

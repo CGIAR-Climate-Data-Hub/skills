@@ -1,0 +1,231 @@
+---
+title: CDH Metadata
+description: Inspects a geospatial file and generates a valid YAML metadata record following the CGIAR Climate Data Hub standard.
+sidebar:
+  order: 8
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs>
+<TabItem label="Explanation">
+
+**Type:** Metadata authoring  
+**Skill file:** `.agents/skills/cdh-metadata/SKILL.md`  
+**Raw URL:** `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/cdh-metadata/SKILL.md`
+
+---
+
+You point the agent at a geospatial file. It inspects it automatically, asks you the fields it
+cannot derive, shows you a plan, and writes a `.yaml` file that validates against the
+[CDH metadata schema](https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.1.0/schemas/core.schema.json).
+
+The skill handles **GeoTIFF, NetCDF, Zarr, GeoPackage, Shapefile, FlatGeobuf, and Parquet** inputs.
+
+## What auto-extracts vs. what you answer
+
+| Source | Fields filled automatically |
+|--------|-----------------------------|
+| File inspection | Bounding box, CRS, spatial resolution, variable names, data types, nodata value, file size, media type |
+| Always asked | `id`, `title`, `description`, `license`, contact (licensor), citation or DOI, data URLs, CDH domain |
+| Asked only if missing | Temporal range, temporal resolution, keywords, version, processing provenance, geography |
+
+## Four-stage workflow
+
+**Stage 1 — Inspect.** The agent runs a short Python snippet (rasterio, xarray, or geopandas
+depending on file type) and prints the extracted metadata for you to verify.
+
+**Stage 2 — Collect inputs.** Two rounds of questions are asked together, not one at a time.
+Round 1 covers the always-required fields. Round 2 asks only for anything still unknown.
+
+**Stage 3 — Confirm.** A compact plan is shown before any file is written:
+
+```
+ID:       my-dataset-v1
+Title:    My Dataset
+License:  CC-BY-4.0
+Temporal: 2020-01-01 → 2022-12-31
+Spatial:  [-90.0, 10.0, -75.0, 18.0] — EPSG:4326
+Domain:   climate
+Data:     https://example.org/data/my-dataset.tif
+Output:   D:/data/my-dataset-v1.yaml
+```
+
+**Stage 4 — Generate.** The YAML file is written to the same directory as the dataset (or
+wherever you specify), named `<id>.yaml`.
+
+## CDH domains
+
+| Value | Description |
+|-------|-------------|
+| `adaptation` | Climate adaptation measures |
+| `agricultural-production` | Crop and livestock production |
+| `boundaries` | Administrative or geographic boundaries |
+| `climate` | Climate variables and projections |
+| `hydrology` | Water resources |
+| `mitigation` | GHG mitigation |
+| `socioeconomic` | Socioeconomic indicators |
+
+## Supported extensions
+
+The skill automatically adds the correct extension URLs to `extensions[]` in the YAML based on
+which blocks are used:
+
+| Extension | When it's added |
+|-----------|----------------|
+| `cdh` | Always — when a `cdh:` block is present |
+| `datacube` | When `dimensions:` or `variables:` blocks are used (NetCDF, Zarr) |
+| `agriculture` | When `commodities:` is specified |
+| `climate` | When a `climate:` block is included |
+| `classification` | When a `classes:` field is present |
+
+</TabItem>
+<TabItem label="Claude Code">
+
+Complete the [Claude Code setup](../usage/claude-code/) first, then launch `claude` from the project root.
+
+**Example request — GeoTIFF**
+
+```
+Create CDH metadata for D:/data/MapaForestal_2024.tif.
+This is Honduras National Forest Map 2024, published by ICF under CC-BY-4.0.
+Contact: Juan García, ICF, jgarcia@icf.gob.hn
+DOI: 10.12345/forestal-2024
+The data is at https://s3.amazonaws.com/cdh-data/MapaForestal_2024.tif
+Domain: boundaries
+```
+
+The skill inspects the file, asks any missing fields, shows a plan, and writes
+`MapaForestal_2024.yaml` next to the source file.
+
+**Example request — NetCDF**
+
+```
+Generate CDH metadata for D:/data/yield_dedza_bean.nc
+This is DSSAT bean yield simulation output for Dedza district, Malawi (2000–2020).
+License: CC0-1.0, produced by CIMMYT. Domain: agricultural-production
+```
+
+For a NetCDF the skill additionally fills in the `datacube` extension with dimension
+and variable metadata extracted from the file.
+
+**Trigger phrases**
+
+The skill also activates on informal requests:
+
+```
+document this raster for CDH
+write a YAML for my soil file
+how do I add my dataset to the climate data hub
+help me fill in the metadata fields
+```
+
+:::tip[No aggeodata needed]
+This skill uses standard Python libraries (`rasterio`, `xarray`, `geopandas`) and writes plain
+YAML — it does not require `aggeodata` to be installed.
+:::
+
+</TabItem>
+<TabItem label="Antigravity">
+
+Complete the [Antigravity setup](../usage/antigravity/) first, then paste the system prompt below.
+
+**System prompt**
+
+```
+== ENVIRONMENT SETUP (run once before anything else) ==
+Run the following command and wait for it to complete before proceeding:
+
+pip install rasterio xarray geopandas pyyaml
+
+== SKILL LOADING ==
+When the user asks you to create or generate CDH metadata for a geospatial file,
+fetch and read this skill file before doing anything else:
+
+https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/cdh-metadata/SKILL.md
+
+Use read_url_content to fetch it. Follow the staged workflow in the file exactly —
+inspect the dataset, ask the user for missing fields, show a plan, then write the YAML.
+
+Do NOT invent the skill contents from memory. Always fetch the current file from the URL above.
+```
+
+**Example request — GeoTIFF**
+
+```
+Create CDH metadata for /data/MapaForestal_2024.tif.
+Honduras National Forest Map 2024, ICF, CC-BY-4.0.
+Contact: jgarcia@icf.gob.hn. DOI: 10.12345/forestal-2024
+Domain: boundaries
+```
+
+**Example request — NetCDF**
+
+```
+Generate CDH metadata for /data/yield_dedza_bean.nc
+DSSAT bean yield simulation, Dedza district Malawi 2000–2020.
+CIMMYT, CC0-1.0. Domain: agricultural-production
+```
+
+**Troubleshooting**
+
+| Symptom | Fix |
+|---------|-----|
+| `read_url_content` returns an error | Verify Antigravity has web access enabled |
+| `ModuleNotFoundError: rasterio` | Run the pip install in the system prompt above |
+| Agent invents the YAML without asking questions | Confirm the system prompt was saved and the fetch succeeded |
+
+</TabItem>
+<TabItem label="Codex">
+
+Complete the [OpenAI Codex setup](../usage/codex/) first (install dependencies, configure the agent), then paste the system prompt below.
+
+**System prompt**
+
+```
+When the user asks you to create or generate CDH metadata for a geospatial file,
+fetch and read this skill file before doing anything else:
+
+https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/cdh-metadata/SKILL.md
+
+To fetch this file: if your environment has a URL-reading tool, use it. Otherwise use curl,
+wget, Invoke-WebRequest, or any equivalent shell command. If network access is blocked, tell
+the user exactly which URL could not be read and ask for approval.
+
+Follow the staged workflow in the file exactly — inspect the dataset, ask the user for missing
+fields, show a plan, then write the YAML.
+
+The skill uses standard Python libraries. Install them if not present:
+pip install rasterio xarray geopandas pyyaml
+
+Do NOT invent the skill contents from memory. Fetch the current file from the URL above
+at the start of each new metadata task, unless it was already fetched in the same session.
+```
+
+**Example request — GeoTIFF**
+
+```
+Create CDH metadata for /data/MapaForestal_2024.tif.
+Honduras National Forest Map 2024, ICF, CC-BY-4.0.
+Contact: jgarcia@icf.gob.hn. DOI: 10.12345/forestal-2024
+Domain: boundaries
+```
+
+**Example request — NetCDF**
+
+```
+Generate CDH metadata for /data/yield_dedza_bean.nc
+DSSAT bean yield simulation, Dedza district Malawi 2000–2020.
+CIMMYT, CC0-1.0. Domain: agricultural-production
+```
+
+**Troubleshooting**
+
+| Symptom | Fix |
+|---------|-----|
+| Codex cannot access URLs | Enable internet access in Codex settings |
+| `ModuleNotFoundError: rasterio` | Run `pip install rasterio xarray geopandas pyyaml` |
+| Agent invents the YAML without asking questions | Verify the system prompt was saved and the fetch succeeded |
+
+</TabItem>
+</Tabs>

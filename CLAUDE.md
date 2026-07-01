@@ -17,6 +17,7 @@ in the skill files.
 | Process / clip / aggregate already-downloaded data | `.agents/skills/geospatial-cube-processor/SKILL.md` |
 | Plot / chart / notebook from existing data | `.agents/skills/notebook-plots/SKILL.md` |
 | Spatial crop modeling / run crop model over a region | `.agents/skills/spatial-crop-modeler/SKILL.md` |
+| Create / generate CDH metadata YAML for a dataset | `.agents/skills/cdh-metadata/SKILL.md` |
 
 ### gcf-pipeline trigger phrases (read `.agents/skills/gcf-pipeline/SKILL.md` when any of these appear)
 
@@ -58,6 +59,15 @@ in the skill files.
 - "model [crop] in [country/region]"
 - "estimate production for", "forecast harvest for"
 - any prompt that implies **running a crop model spatially** over a region or country
+
+### cdh-metadata trigger phrases (read `.agents/skills/cdh-metadata/SKILL.md` when any of these appear)
+
+- "create metadata for", "generate metadata for", "write CDH metadata", "generate YAML metadata"
+- "document this dataset", "document my raster", "document my NetCDF"
+- "add my data to the Climate Data Hub", "prepare dataset for CDH", "catalog this dataset"
+- "fill in the metadata fields", "help me describe my dataset"
+- "create a YAML for CDH", "write a metadata record"
+- any prompt that combines a geospatial file path with a documentation or cataloging intent
 
 ### How to invoke a skill
 

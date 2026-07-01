@@ -1,4 +1,5 @@
-name: Validate Skills
+name: Validate Skill Submission
+
 on:
   pull_request:
     paths:
@@ -8,31 +9,91 @@ on:
       - main
     paths:
       - ".agents/skills/**"
-
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write   # needed to post PR comment
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    outputs:
+      changed_skills: ${{ steps.detect.outputs.skills }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so we can diff against base branch
 
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@main
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: Install skill-validator
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      # ── Detect which skill directories changed in this PR ──────────────────
+      - name: Detect changed skills
+        id: detect
         run: |
-          brew install agent-ecosystem/tap/skill-validator
-
-      - name: Validate skills
-        run: |
-          set +e
-          skill-validator check --emit-annotations .agents/skills/
-          code=$?
-          skill-validator check -o markdown .agents/skills/ >> "$GITHUB_STEP_SUMMARY" || true
-          # exit 0 = pass, exit 2 = warnings only (don't fail), anything else = real error
-          if [ "$code" -eq 0 ] || [ "$code" -eq 2 ]; then
-            exit 0
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="HEAD~1"
           fi
-          exit "$code"
+
+          # Extract unique top-level skill dirs touched by this PR
+          SKILLS=$(git diff --name-only "$BASE"...HEAD \
+            | grep '^\.agents/skills/' \
+            | awk -F/ '{print $1"/"$2"/"$3}' \
+            | sort -u \
+            | tr '\n' ' ')
+
+          echo "Changed skill dirs: $SKILLS"
+          echo "skills=$SKILLS"         >> "$GITHUB_OUTPUT"
+          echo "has_changes=$([ -n "$SKILLS" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      # ── Run validator on changed skills only ───────────────────────────────
+      - name: Validate changed skills (annotations)
+        if: steps.detect.outputs.has_changes == 'true'
+        run: |
+          python -X utf8 scripts/validate_skill.py \
+            --annotations \
+            ${{ steps.detect.outputs.skills }}
+
+      # ── Generate Markdown report for PR comment ────────────────────────────
+      - name: Generate Markdown report
+        if: github.event_name == 'pull_request' && steps.detect.outputs.has_changes == 'true'
+        id: report
+        run: |
+          REPORT=$(python scripts/validate_skill.py \
+            -o markdown \
+            ${{ steps.detect.outputs.skills }})
+          echo "report<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$REPORT"     >> "$GITHUB_OUTPUT"
+          echo "EOF"         >> "$GITHUB_OUTPUT"
+
+      # ── Post or update the validation comment on the PR ────────────────────
+      - name: Post validation report as PR comment
+        if: github.event_name == 'pull_request' && steps.detect.outputs.has_changes == 'true'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ${{ steps.report.outputs.report }}
+
+            ---
+            _Validated skills: `${{ steps.detect.outputs.skills }}`_
+            _Run: [`${{ github.run_id }}`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_
+          edit-mode: replace          # update the comment on each new push
+          comment-tag: cdh-skill-validation   # find the previous comment to replace
+
+      # ── Fail the check if there are errors ────────────────────────────────
+      - name: Enforce pass/fail status
+        if: steps.detect.outputs.has_changes == 'true'
+        run: |
+          python -X utf8 scripts/validate_skill.py \
+            ${{ steps.detect.outputs.skills }}

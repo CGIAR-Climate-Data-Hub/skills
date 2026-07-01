@@ -1,0 +1,13 @@
+# CDH Skills Hub — Code Owners
+#
+# Every PR that adds or modifies a skill requires approval from at least
+# one CDH reviewer before it can be merged.
+#
+# Format: <path pattern>  <@github-username or @org/team>
+#
+# All skill files require a CDH reviewer
+.agents/skills/   @anaguilarar @bjyberg @peetmate @dagudelo30
+
+# Workflow and validator changes also require review
+.github/          @anaguilarar @bjyberg @peetmate @dagudelo30
+scripts/          @anaguilarar @bjyberg @peetmate @dagudelo30

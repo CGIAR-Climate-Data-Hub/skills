@@ -25,6 +25,7 @@ export default defineConfig({
           label: 'Overview',
           items: [
             { label: 'Getting started', slug: 'getting-started' },
+            { label: 'Contributing a skill', slug: 'contributing' },
           ],
         },
         {
@@ -37,6 +38,7 @@ export default defineConfig({
             { label: 'Notebook Plots', slug: 'skills/notebook-plots' },
             { label: 'Climate Dashboard', slug: 'skills/climate-dashboard' },
             { label: 'Spatial Crop Modeler', slug: 'skills/spatial-crop-modeler' },
+            { label: 'CDH Metadata', slug: 'skills/cdh-metadata' },
           ],
         },
         {

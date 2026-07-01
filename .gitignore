@@ -10,6 +10,7 @@ build/
 .claude/skills/geospatial-cube-processor-workspace/
 .claude/skills/notebook-plots-workspace/
 climate-data-download-workspace/
+cdh-metadata-workspace/
 .claude/commands/
 .claude/skills/gcf-pipeline-workspace/
 

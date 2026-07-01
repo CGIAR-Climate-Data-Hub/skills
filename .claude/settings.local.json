@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(*)"
+      "WebFetch(*)",
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Glob(*)",
+      "Grep(*)"
     ]
   },
   "disabledMcpjsonServers": [
