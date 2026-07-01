@@ -226,7 +226,7 @@ Supports GeoTIFF, NetCDF, Zarr, GeoPackage, Shapefile, FlatGeobuf, and Parquet.
 ```
 User: Create CDH metadata for D:/data/MapaForestal_2024.tif
       Honduras National Forest Map 2024, published by ICF under CC-BY-4.0.
-      Contact: jgarcia@icf.gob.hn  DOI: 10.12345/forestal-2024
+      Contact: @icf.gob.hn  DOI: 10.12345/forestal-2024
       Domain: boundaries
 
 Skill: Inspected MapaForestal_2024.tif —
