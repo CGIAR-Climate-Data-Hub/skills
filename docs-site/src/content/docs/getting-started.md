@@ -25,7 +25,7 @@ See the [usage guides](/skills/usage/claude-code/) for step-by-step instructions
 All skills are powered by the `aggeodata` Python package. Install it once:
 
 ```bash
-pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
+pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data-Hub/aggeodata.git" s3fs zarr
 ```
 
 > **AgERA5 only:** If you need hourly relative humidity, vapour pressure, or reference ET,

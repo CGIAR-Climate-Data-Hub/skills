@@ -59,14 +59,14 @@ Interpret the output and act accordingly — do not proceed until the environmen
 
 **Install block A** — ag-cube-cm missing:
 ```bash
-pip install "ag-cube-cm[models] @ git+https://github.com/anaguilarar/ag-cube-cm.git"
+pip install "ag-cube-cm[models] @ git+https://github.com/CGIAR-Climate-Data-Hub/ag-cube-cm.git"
 # then verify:
 ag-cube-cm --version
 ```
 
 **Install block B/C** — aggeodata or mcp missing (mcp ships inside aggeodata's extras):
 ```bash
-pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git"
+pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data-Hub/aggeodata.git"
 ```
 
 After the user installs and confirms, re-run the check before continuing.

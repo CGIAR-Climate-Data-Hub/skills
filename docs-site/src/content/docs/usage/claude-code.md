@@ -35,8 +35,8 @@ to run yield simulations — install both up front so every skill works out of
 the box.
 
 ```bash
-pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
-pip install "ag-cube-cm[models] @ git+https://github.com/anaguilarar/ag-cube-cm.git"
+pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data-Hub/aggeodata.git" s3fs zarr
+pip install "ag-cube-cm[models] @ git+https://github.com/CGIAR-Climate-Data-Hub/ag-cube-cm.git"
 ```
 
 > One-time setup. Run again only after package updates.

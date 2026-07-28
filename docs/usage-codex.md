@@ -22,7 +22,7 @@ whatever network tool is available in its environment (`curl`, `wget`,
 **Install aggeodata once** (in your system Python or a virtual environment):
 
 ```bash
-pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
+pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data-Hub/aggeodata.git" s3fs zarr
 ```
 
 ---

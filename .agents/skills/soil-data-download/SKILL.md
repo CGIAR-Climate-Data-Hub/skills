@@ -67,7 +67,7 @@ for pkg in ['aggeodata']:
 If missing, install:
 
 ```bash
-pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git"
+pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data-Hub/aggeodata.git"
 ```
 
 ## Step 1 — Collect parameters

@@ -173,7 +173,7 @@ When mixing CHIRPS/CHIRTS or GEE with anything else, always set `ncores: 1`.
 ### Install (run once)
 
 ```bash
-pip install "aggeodata[download] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
+pip install "aggeodata[download] @ git+https://github.com/CGIAR-Climate-Data-Hub/aggeodata.git" s3fs zarr
 ```
 
 ### Resolve country → extent (skip if bbox given)
@@ -359,7 +359,7 @@ pip install -e ".[download,mcp]"
 # [mcp]      adds: mcp[cli] for the MCP server
 
 # Or install directly from GitHub:
-pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git"
+pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data-Hub/aggeodata.git"
 ```
 
 If only CHIRPS, CHIRTS, or NASA POWER are needed (no AgERA5):

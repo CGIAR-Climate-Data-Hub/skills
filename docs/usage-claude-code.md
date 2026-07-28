@@ -33,7 +33,7 @@ startup — no extra configuration needed.
 ## Step 2 — Install the aggeodata package
 
 ```bash
-pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
+pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data-Hub/aggeodata.git" s3fs zarr
 ```
 
 > **One-time setup.** You only need to run this once (or after package updates).

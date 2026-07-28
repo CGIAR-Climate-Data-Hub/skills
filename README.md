@@ -53,7 +53,7 @@ in sequence.
 | Hourly RH (06/09/12/15/18 UTC) | AgERA5 | CDS API key required |
 | Wind speed, VPD, Ref. ET, dew point | AgERA5 | CDS API key required |
 
-**Powered by:** [`aggeodata`](https://github.com/anaguilarar/aggeodata)
+**Powered by:** [`aggeodata`](https://github.com/CGIAR-Climate-Data-Hub/aggeodata)
 
 **Example:**
 
@@ -78,7 +78,7 @@ Skill: Here's what I'll download (all via AgERA5):
 
 ```bash
 # Install aggeodata with download + MCP extras
-pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git"
+pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data-Hub/aggeodata.git"
 
 # For AgERA5: create ~/.cdsapirc with your Copernicus CDS key
 # Register free at https://cds.climate.copernicus.eu/

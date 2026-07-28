@@ -7,7 +7,7 @@ These rules apply automatically to all tasks executed in this workspace.
 Before fetching skill files or executing any task, run this once per session and wait for it to finish:
 
 ```bash
-pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git" s3fs zarr
+pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data-Hub/aggeodata.git" s3fs zarr
 ```
 
 This installs `aggeodata` into the sandbox so MCP tools and Python fallback both work.

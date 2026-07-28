@@ -43,8 +43,8 @@ Output: spatially-explicit yield maps (NetCDF, kg/ha)
 
 User must have installed on their machine:
 - Python >= 3.10
-- ag-cube-cm: `pip install "ag-cube-cm[models] @ git+https://github.com/anaguilarar/ag-cube-cm.git"`
-- aggeodata: `pip install "aggeodata[download,mcp] @ git+https://github.com/anaguilarar/aggeodata.git"`
+- ag-cube-cm: `pip install "ag-cube-cm[models] @ git+https://github.com/CGIAR-Climate-Data-Hub/ag-cube-cm.git"`
+- aggeodata: `pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data-Hub/aggeodata.git"`
 - DSSAT (optional, auto-detected if on PATH)
 
 ## Repository

@@ -14,11 +14,13 @@ description: >
 
 # CDH Metadata Generator
 
-You produce valid YAML metadata records for the CGIAR Climate Data Hub (CDH) standard. Inspect
-the dataset automatically where possible, ask the user for fields you cannot derive, and write a
-YAML file that validates against the CDH schema.
+You produce valid YAML metadata records for the CGIAR Climate Data Hub (CDH) standard **v0.2.0**.
+Inspect the dataset automatically where possible, ask the user for fields you cannot derive, and
+write a YAML file that validates against the CDH schema.
 
-Schema root: `https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.1.0/schemas/core.schema.json`  
+Schema root: `https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/schemas/profiles/cdh.schema.json`  
+Official repository: `https://github.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard`  
+Real catalog records: `https://github.com/CGIAR-Climate-Data-Hub/cdh-catalog/tree/main/records`  
 Full annotated template: read `references/cdh-annotated-template.md` whenever you need to check
 a field, see all optional fields, or the user asks for a more complete record.
 
@@ -30,7 +32,7 @@ a field, see all optional fields, or the user asks for a more complete record.
 |--------|--------|
 | **File inspection** | bbox, CRS, spatial resolution, variable names, data types, nodata, file size, media type |
 | **Always ask** | id, title, description, license, contact (licensor), citation or DOI, data URLs, `cdh.domain` |
-| **Ask only if missing** | temporal dates, keywords, version, processing provenance, additional contacts |
+| **Ask only if missing** | temporal dates, keywords, version, processing provenance, additional contacts, series |
 
 ---
 
@@ -130,21 +132,22 @@ answered, ask **Round 2** only for fields that are still missing.
 | `title` | "Human-readable title for the dataset?" |
 | `description` | "2–5 sentence description: what does it represent, how was it produced, what do values mean?" |
 | `license` | "License? Common: `CC-BY-4.0`, `CC-BY-SA-4.0`, `CC0-1.0`. Or enter a custom string." |
-| `contact (licensor)` | "Who is the licensor? Name, organization, email. (The organization that owns or published the data.)" |
-| `citation or DOI` | "Is there a DOI (e.g. `10.xxxx/...`) or citation (authors, year, title, publisher) for this dataset?" |
-| `data locations` | "Where is the data accessible? Provide HTTPS URL(s) or S3 path(s). If not yet hosted, enter a placeholder." |
+| `contact (licensor)` | "Who is the licensor? Provide: organization name (required), and optionally name, email, URL. Which role(s)? Options: `licensor`, `producer`, `processor`, `point-of-contact`, `custodian`." |
+| `citation or DOI` | "Is there a DOI (bare format, e.g. `10.xxxx/...`) or structured citation (authors list, year, title, publisher, url)?" |
+| `data locations` | "Where is the data accessible? Provide HTTPS URL(s) or S3 path(s). If multiple formats (Zarr + COGs), list each separately with a short name (e.g. `zarr`, `cogs`)." |
 | `cdh.domain` | "CDH domain(s)? Options: `adaptation`, `agricultural-production`, `boundaries`, `climate`, `hydrology`, `mitigation`, `socioeconomic`" |
 
 **Round 2 — ask only if unknown:**
 
 | Field | Prompt |
 |-------|--------|
-| `temporal` | "Time period the data covers? (start date and end date, YYYY-MM-DD)" |
-| `temporal resolution` | "What is the time step? (e.g. daily, monthly, annual, static)" |
-| `keywords` | "Any keywords to add? I'll suggest some from the variables." |
-| `version` | "Is this a versioned release? (e.g. `v1.0`, `2020`)" |
+| `temporal` | "Time period the data covers? Use a single value for a static dataset (e.g. `2020`) or start/end dates (YYYY-MM-DD). Is end date open-ended (ongoing)?" |
+| `keywords` | "Any keywords to add? I'll suggest some from the variables. Can optionally be linked to AGROVOC or other vocabularies." |
+| `version` | "Is this a versioned release? (e.g. `v1.0`, `2020`, `v2r2`)" |
+| `series` | "Does this belong to a product family/series? (e.g. MapSPAM, GLW, CHIRPS). If so, name and URL?" |
 | `processing[source]` | "Where did the raw/source data originally come from? (URL or repository)" |
 | `spatial.geography` | "What geographic area does this cover? (country name, region, or `world`)" |
+| `not_recommended_for` | "Any uses this dataset is NOT suitable for? (optional; helps users avoid misuse)" |
 
 Never block on optional fields. If the user says "I don't know" or skips a field, use `null`
 or omit it per the schema and move on.
@@ -159,10 +162,10 @@ Show a compact summary before writing the file:
 ID:       <id>
 Title:    <title>
 License:  <license>
-Temporal: <start_date> → <end_date>
+Temporal: <date or start_date → end_date>
 Spatial:  [<west>, <south>, <east>, <north>] — <crs>
 Domain:   <domain>
-Data:     <url>
+Data:     <url(s)>
 Output:   <output_path>/<id>.yaml
 ```
 
@@ -175,20 +178,29 @@ Ask: **"Does this look right? I'll generate the YAML."**
 Write the file to the **same directory as the dataset** (or the directory the user specifies),
 named `<id>.yaml`.
 
-**Mandatory header line** (adjust relative path if needed):
+**Mandatory header lines:**
 ```yaml
 # yaml-language-server: $schema=../../spec/schemas/profiles/cdh.schema.json
+"$schema": https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/schemas/profiles/cdh.schema.json
+cdh_schema_version: "v0.2.0"
 ```
 
-**Hard rules:**
-- `cdh_schema_version`: always `"v0.1.0"`
-- `created` / `updated`: today → `"2026-07-01"`
+**Hard rules (v0.2.0):**
+- `cdh_schema_version`: always `"v0.2.0"`
+- `"$schema"`: always the CDH profile URL above
+- `extensions[]`: required — list every extension schema URL actually used (see below); always include the CDH extension
+- `created` / `updated`: today → `"2026-07-28"`
 - `bbox`: 4-number array `[west, south, east, north]` — never a string
 - `crs`: EPSG string, e.g. `"EPSG:4326"`
-- `contact`: at least one entry must include `licensor` in its `roles` list — schema enforces this
-- `processing`: if present, at least one step must have `id: source`
-- `extensions`: list every extension schema URL you actually use (see below)
-- Use `null` for unknown nullable fields; omit fields that are fully optional and unknown
+- `contact[]`: every entry must include `organization`; at least one entry must have `licensor` in its `roles` list; `roles` is an **array** (not a scalar)
+- `citation`: structured object with `authors` (array), `date`, and optionally `title`, `publisher`, `url` — NOT a plain string
+- `doi`: bare DOI only (e.g. `10.7910/DVN/SWPENT`) — no `https://doi.org/` prefix
+- `data[]`: each entry must have a unique `name` field
+- `processing[]`: if present, at least one step must have `id: source`
+- `temporal`: use `date` (single instant/period) OR `start_date`/`end_date` (span) — mutually exclusive; `end_date: null` means open-ended
+- Temporal cadence (daily, monthly, etc.) goes in `dimensions[]` with `type: temporal` and ISO 8601 `step` — NOT in `temporal:`
+- Do NOT write stray `null` values for fields that are simply omitted; only use `null` for explicitly nullable fields like open-ended `end_date`
+- `resource_type`: one of `dataset | software | service | document`
 
 **Media types by format:**
 
@@ -204,20 +216,20 @@ named `<id>.yaml`.
 
 **Extension URLs (add to `extensions[]` when the matching block is used):**
 ```
-# Always add when using the cdh: block:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.1.0/extensions/cdh/schema.json
+# Always add — required for CDH Hub records:
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/cdh/schema.json
 
 # Add when using dimensions: / variables: blocks:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.1.0/extensions/datacube/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/datacube/schema.json
 
 # Add when using commodities: field:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.1.0/extensions/agriculture/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/agriculture/schema.json
 
 # Add when using climate: block:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.1.0/extensions/climate/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/climate/schema.json
 
 # Add when using classes: field:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.1.0/extensions/classification/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/classification/schema.json
 ```
 
 After writing, print the file path and show a 30-line preview.
@@ -227,7 +239,7 @@ After writing, print the file path and show a 30-line preview.
 ## Controlled vocabularies
 
 ### `resource_type`
-`dataset` | `software` | `service` | `ai-skill` | `document`
+`dataset` | `software` | `service` | `document`
 
 ### `cdh.domain` (pick one or more)
 `adaptation` | `agricultural-production` | `boundaries` | `climate` | `hydrology` | `mitigation` | `socioeconomic`
@@ -236,8 +248,8 @@ After writing, print the file path and show a 30-line preview.
 `CC-BY-4.0` | `CC-BY-SA-4.0` | `CC0-1.0` | `CC-BY-NC-4.0` | `ODbL-1.0`  
 For proprietary data use a plain string, e.g. `"FAO Internal Use Only"`.
 
-### Contact roles
-`licensor` | `producer` | `processor` | `point-of-contact`
+### Contact roles (array — one or more per contact entry)
+`licensor` | `producer` | `processor` | `point-of-contact` | `custodian`
 
 ### Spatial resolution type
 `xy` (regular grid, same x and y) | `x` | `y` | `point` | `polygon`
@@ -246,6 +258,10 @@ For proprietary data use a plain string, e.g. `"FAO Internal Use Only"`.
 `world` | `africa` | `asia` | `latin-america-and-the-caribbean` | `sub-saharan-africa`  
 Country codes follow ISO 3166-1 alpha-2 lower-case or UN M49 names in the CDH vocab  
 (e.g. `ethiopia`, `colombia`, `kenya`). When in doubt, use country name in lower-kebab-case.
+
+### Dimension types (common)
+`temporal` | `crop` | `species` | `technology` | `scenario` | `bands`  
+Any descriptive string is valid — these are the most common.
 
 ---
 
