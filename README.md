@@ -483,10 +483,3 @@ description: >
    - Updated `skills-lock.json`
    - A brief PR description of what the skill does and which evals were run
 
-### Ideas for new skills
-
-| Skill idea | Data source |
-|------------|-------------|
-| Satellite image retrieval | Sentinel-2, HLS (NASA) |
-| Climate index computation | SPEI, SPI, heat stress indices |
-| Land use / LULC change | ESA WorldCover, MODIS MCD12 |
