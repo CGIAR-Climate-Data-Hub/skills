@@ -1,0 +1,128 @@
+---
+export interface Props {
+  src: string;
+  kind: 'pipeline' | 'download' | 'processing' | 'visualization';
+  kindLabel: string;
+  title: string;
+  description: string;
+  prompt?: string;
+  skillSlug: string;
+  skillLabel: string;
+}
+
+const { src, kind, kindLabel, title, description, prompt, skillSlug, skillLabel } = Astro.props;
+---
+
+<figure class="cdh-example">
+  <div class="cdh-example-copy">
+    <span class={`cdh-card-kind ${kind}`}>{kindLabel}</span>
+    <h3 class="cdh-example-title">{title}</h3>
+    <p class="cdh-example-desc">{description}</p>
+    {prompt && <p class="cdh-example-prompt">“{prompt}”</p>}
+    <a class="cdh-example-link" href={`/skills/${skillSlug}/`}>
+      Full walkthrough: {skillLabel} <span aria-hidden="true">→</span>
+    </a>
+  </div>
+
+  <div class="cdh-example-video-frame">
+    <video
+      src={src}
+      controls
+      preload="metadata"
+      aria-label={title}
+    />
+  </div>
+</figure>
+
+<style>
+  .cdh-example {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+    gap: var(--space-7);
+    align-items: center;
+    margin: 0 0 var(--space-8);
+    padding: var(--space-6);
+    background: var(--cdh-surface);
+    border: 1px solid var(--cdh-border);
+    border-radius: var(--radius-lg);
+  }
+
+  .cdh-example-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .cdh-example-title {
+    font-family: var(--serif);
+    font-size: var(--font-size-9);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--cdh-blue-950);
+    margin: var(--space-2) 0 0;
+  }
+  [data-theme='dark'] .cdh-example-title {
+    color: var(--sl-color-white);
+  }
+
+  .cdh-example-desc {
+    font-size: var(--font-size-5);
+    line-height: 1.6;
+    color: var(--cdh-grey-6);
+    margin: 0;
+  }
+  [data-theme='dark'] .cdh-example-desc {
+    color: var(--sl-color-gray-3);
+  }
+
+  .cdh-example-prompt {
+    font-family: var(--mono);
+    font-size: var(--font-size-3);
+    line-height: 1.6;
+    color: var(--cdh-grey-5);
+    border-inline-start: 2px solid var(--cdh-blue-300);
+    padding-inline-start: var(--space-3);
+    margin: var(--space-1) 0;
+  }
+  [data-theme='dark'] .cdh-example-prompt {
+    color: var(--sl-color-gray-4);
+  }
+
+  .cdh-example-link {
+    font-size: var(--font-size-4);
+    font-weight: 600;
+    color: var(--cdh-blue-700);
+    text-decoration: none;
+    margin-top: var(--space-2);
+  }
+  .cdh-example-link:hover {
+    text-decoration: underline;
+  }
+  .cdh-example-link span {
+    display: inline-block;
+    transition: transform 0.12s;
+  }
+  .cdh-example-link:hover span {
+    transform: translateX(3px);
+  }
+
+  .cdh-example-video-frame {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--cdh-border-strong);
+    background: var(--cdh-grey-8);
+    line-height: 0;
+  }
+  .cdh-example-video-frame video {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  @media (max-width: 900px) {
+    .cdh-example {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
