@@ -14,6 +14,11 @@ export default defineConfig({
         replacesTitle: false,
       },
       customCss: ['./src/styles/custom.css'],
+      components: {
+        Hero: './src/components/overrides/Hero.astro',
+        Header: './src/components/overrides/Header.astro',
+        Footer: './src/components/overrides/Footer.astro',
+      },
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/CGIAR-Climate-Data-Hub/skills' },
       ],

@@ -1,0 +1,36 @@
+---
+import Default from '@astrojs/starlight/components/Header.astro';
+---
+
+<div class="cdh-tie-in">
+  <a href="https://cgiar-climate-data-hub.github.io/">← Climate Data Hub</a>
+</div>
+<Default {...Astro.props}><slot /></Default>
+
+<style>
+  .cdh-tie-in {
+    background: color-mix(in srgb, var(--cdh-bg) 86%, transparent);
+    border-bottom: 1px solid var(--cdh-border);
+  }
+  .cdh-tie-in a {
+    display: block;
+    max-width: var(--sl-content-width, 67.5rem);
+    margin-inline: auto;
+    padding: 6px var(--space-4);
+    font-family: var(--mono);
+    font-size: var(--font-size-2);
+    letter-spacing: 0.02em;
+    color: var(--cdh-grey-6);
+    text-decoration: none;
+  }
+  .cdh-tie-in a:hover {
+    color: var(--cdh-blue-700);
+    text-decoration: underline;
+  }
+  [data-theme='dark'] .cdh-tie-in {
+    border-bottom-color: var(--sl-color-hairline);
+  }
+  [data-theme='dark'] .cdh-tie-in a {
+    color: var(--sl-color-gray-4);
+  }
+</style>

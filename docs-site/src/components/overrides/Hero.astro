@@ -1,0 +1,196 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+
+const { data } = Astro.locals.starlightRoute.entry;
+const { title = data.title, tagline, actions = [] } = data.hero ?? {};
+
+const STEPS = [
+  {
+    n: '01',
+    kind: 'download' as const,
+    label: 'You describe what you need',
+    detail: '“Show me accumulated rainfall for Kenya, March–May 2021, per district.”',
+  },
+  {
+    n: '02',
+    kind: 'pipeline' as const,
+    label: 'The right skill runs',
+    detail: 'Download, spatial processing, or the full pipeline — Claude picks the workflow.',
+  },
+  {
+    n: '03',
+    kind: 'visualization' as const,
+    label: 'You get the output',
+    detail: 'A Jupyter notebook and an interactive dashboard, ready to open.',
+  },
+];
+---
+
+<div class="cdh-hero">
+  <p class="cdh-hero-eyebrow">Climate Data Hub · AI Tools</p>
+
+  {title && <h1 class="cdh-hero-title" set:html={title} />}
+  {tagline && <p class="cdh-hero-tagline" set:html={tagline} />}
+
+  {actions.length > 0 && (
+    <div class="cdh-hero-actions">
+      {actions.map((action) => (
+        <a
+          href={action.link}
+          class={`cdh-hero-btn ${action.variant === 'minimal' ? 'is-ghost' : 'is-solid'}`}
+        >
+          {action.text}
+          {action.icon?.name && <Icon name={action.icon.name} />}
+        </a>
+      ))}
+    </div>
+  )}
+
+  <ol class="cdh-hero-steps">
+    {STEPS.map((step) => (
+      <li class="cdh-hero-step">
+        <span class={`cdh-hero-step-n cdh-card-kind ${step.kind}`}>{step.n}</span>
+        <div>
+          <p class="cdh-hero-step-label">{step.label}</p>
+          <p class="cdh-hero-step-detail">{step.detail}</p>
+        </div>
+      </li>
+    ))}
+  </ol>
+</div>
+
+<style>
+  .cdh-hero {
+    padding-block: var(--space-8) var(--space-7);
+  }
+
+  .cdh-hero-eyebrow {
+    font-family: var(--mono);
+    font-size: var(--font-size-2);
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--cdh-grey-5);
+    margin: 0 0 var(--space-4);
+  }
+
+  .cdh-hero-title {
+    font-family: var(--serif);
+    font-size: var(--font-size-editorial-title);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    color: var(--cdh-blue-950);
+    margin: 0 0 var(--space-4);
+    max-width: 18ch;
+  }
+
+  .cdh-hero-tagline {
+    font-family: var(--sans);
+    font-size: var(--font-size-8);
+    line-height: 1.5;
+    color: var(--cdh-grey-6);
+    max-width: 48ch;
+    margin: 0 0 var(--space-6);
+  }
+
+  .cdh-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-8);
+  }
+
+  .cdh-hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: var(--sans);
+    font-size: var(--font-size-5);
+    font-weight: 600;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+  }
+  .cdh-hero-btn :global(svg) {
+    width: 1em;
+    height: 1em;
+  }
+
+  .cdh-hero-btn.is-solid {
+    background: var(--cdh-blue-700);
+    color: var(--cdh-grey-0);
+    border: 1px solid var(--cdh-blue-700);
+  }
+  .cdh-hero-btn.is-solid:hover {
+    background: var(--cdh-blue-800);
+    border-color: var(--cdh-blue-800);
+  }
+
+  .cdh-hero-btn.is-ghost {
+    background: transparent;
+    color: var(--cdh-blue-950);
+    border: 1px solid var(--cdh-border-strong);
+  }
+  .cdh-hero-btn.is-ghost:hover {
+    border-color: var(--cdh-blue-700);
+    color: var(--cdh-blue-700);
+  }
+
+  [data-theme='dark'] .cdh-hero-title,
+  [data-theme='dark'] .cdh-hero-btn.is-ghost {
+    color: var(--sl-color-white);
+  }
+  [data-theme='dark'] .cdh-hero-tagline {
+    color: var(--sl-color-gray-3);
+  }
+
+  .cdh-hero-steps {
+    list-style: none;
+    margin: 0;
+    padding: var(--space-6) 0 0;
+    border-top: 1px solid var(--cdh-border);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+  }
+
+  .cdh-hero-step {
+    display: flex;
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
+
+  .cdh-hero-step-n {
+    font-family: var(--mono);
+    flex-shrink: 0;
+  }
+
+  .cdh-hero-step-label {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: var(--font-size-5);
+    color: var(--cdh-grey-8);
+    margin: 0 0 2px;
+  }
+  [data-theme='dark'] .cdh-hero-step-label {
+    color: var(--sl-color-white);
+  }
+
+  .cdh-hero-step-detail {
+    font-size: var(--font-size-4);
+    line-height: 1.5;
+    color: var(--cdh-grey-6);
+    margin: 0;
+  }
+  [data-theme='dark'] .cdh-hero-step-detail {
+    color: var(--sl-color-gray-3);
+  }
+
+  @media (max-width: 720px) {
+    .cdh-hero-steps {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
