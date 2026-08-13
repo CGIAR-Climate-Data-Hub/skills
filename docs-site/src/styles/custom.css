@@ -74,6 +74,10 @@
   --radius-lg: 10px;
 
   --nav-height: 72px;
+
+  /* Height of the "← Climate Data Hub" tie-in bar added above Starlight's
+     header (see Header.astro override). */
+  --cdh-tie-in-height: 28px;
 }
 
 /* ── Starlight overrides (light theme) ────────────────────────────
@@ -89,6 +93,19 @@
 
   --sl-font-system:       var(--sans);
   --sl-font-system-mono:  var(--mono);
+
+  /* Starlight's header is a fixed-height box (position:fixed); this same var
+     also sizes the sidebar's top offset and the content area's padding-top.
+     Grow it by the tie-in bar's height so the extra bar doesn't overflow the
+     box and overlap the page below it. Mirrors Starlight's own 50rem
+     breakpoint so Default's header keeps its normal height either way. */
+  --sl-nav-height: calc(3.5rem + var(--cdh-tie-in-height));
+}
+
+@media (min-width: 50rem) {
+  :root {
+    --sl-nav-height: calc(4rem + var(--cdh-tie-in-height));
+  }
 }
 
 /* ── Dark theme overrides ──────────────────────────────────────── */
