@@ -208,6 +208,18 @@
   background: rgba(180, 74, 34, 0.10);
   color: var(--cdh-terra-700);
 }
+.cdh-card-kind.modeling {
+  background: rgba(110, 44, 18, 0.10);
+  color: var(--cdh-terra-900);
+}
+.cdh-card-kind.metadata {
+  background: var(--cdh-grey-1);
+  color: var(--cdh-grey-7);
+}
+[data-theme='dark'] .cdh-card-kind.metadata {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--sl-color-gray-2);
+}
 
 .cdh-card-summary {
   font-size: var(--font-size-4);
@@ -270,4 +282,32 @@
   color: var(--cdh-grey-5);
   margin-top: var(--space-7);
   margin-bottom: var(--space-1);
+}
+
+/* ── Thematic category groups within the skills catalog ─────────── */
+.cdh-category {
+  margin-top: var(--space-7);
+}
+.cdh-category:first-of-type {
+  margin-top: var(--space-4);
+}
+
+.cdh-category-label {
+  font-family: var(--sans);
+  font-size: var(--font-size-6);
+  font-weight: 700;
+  color: var(--cdh-brand-primary);
+  margin: 0 0 2px;
+}
+[data-theme='dark'] .cdh-category-label {
+  color: var(--sl-color-white);
+}
+
+.cdh-category-desc {
+  font-size: var(--font-size-4);
+  color: var(--cdh-grey-5);
+  margin: 0;
+}
+[data-theme='dark'] .cdh-category-desc {
+  color: var(--sl-color-gray-4);
 }

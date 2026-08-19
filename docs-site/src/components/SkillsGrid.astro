@@ -1,50 +1,131 @@
 ---
 import SkillCard from './SkillCard.astro';
 
-const SKILLS = [
+type Skill = {
+  name: string;
+  slug: string;
+  kind: 'pipeline' | 'download' | 'processing' | 'modeling' | 'visualization' | 'metadata';
+  summary: string;
+  tags: string[];
+  runtime?: string;
+};
+
+type Category = {
+  label: string;
+  description: string;
+  skills: Skill[];
+};
+
+const CATEGORIES: Category[] = [
   {
-    name: 'GCF Pipeline',
-    slug: 'skills/gcf-pipeline',
-    kind: 'pipeline' as const,
-    summary: 'Full download → spatial processing → notebook + dashboard workflow in one conversation. Type one sentence; get a Jupyter notebook and interactive HTML dashboard.',
-    tags: ['gcf-pipeline', 'end-to-end', 'NASA POWER', 'CHIRPS', 'GADM'],
-    runtime: 'Claude Code · Antigravity · Codex',
+    label: 'End-to-end pipelines',
+    description: 'One request, every stage — download, processing, and visualization chained together.',
+    skills: [
+      {
+        name: 'GCF Pipeline',
+        slug: 'skills/gcf-pipeline',
+        kind: 'pipeline',
+        summary: 'Full download → spatial processing → notebook + dashboard workflow in one conversation. Type one sentence; get a Jupyter notebook and interactive HTML dashboard.',
+        tags: ['gcf-pipeline', 'end-to-end', 'NASA POWER', 'CHIRPS', 'GADM'],
+        runtime: 'Claude Code · Antigravity · Codex',
+      },
+    ],
   },
   {
-    name: 'Climate Data Download',
-    slug: 'skills/climate-data-download',
-    kind: 'download' as const,
-    summary: 'Downloads CHIRPS precipitation, CHIRTS-ERA5 temperature, AgERA5 agrometeorological indicators, and NASA POWER data for any country or bounding box.',
-    tags: ['CHIRPS', 'CHIRTS', 'AgERA5', 'NASA POWER', 'NetCDF'],
-    runtime: 'Python · aggeodata',
+    label: 'Data acquisition',
+    description: 'Download climate and soil source data for any country or bounding box.',
+    skills: [
+      {
+        name: 'Climate Data Download',
+        slug: 'skills/climate-data-download',
+        kind: 'download',
+        summary: 'Downloads CHIRPS precipitation, CHIRTS-ERA5 temperature, AgERA5 agrometeorological indicators, and NASA POWER data for any country or bounding box.',
+        tags: ['CHIRPS', 'CHIRTS', 'AgERA5', 'NASA POWER', 'NetCDF'],
+        runtime: 'Python · aggeodata',
+      },
+      {
+        name: 'Soil Data Download',
+        slug: 'skills/soil-data-download',
+        kind: 'download',
+        summary: 'Downloads SoilGrids soil property rasters — clay, sand, silt, bulk density, organic carbon, pH, water content — across depth layers, and stacks them into a validated soil datacube.',
+        tags: ['SoilGrids', 'clay/sand/silt', 'soil pH', 'datacube'],
+        runtime: 'Python · aggeodata',
+      },
+    ],
   },
   {
-    name: 'Geospatial Cube Processor',
-    slug: 'skills/geospatial-cube-processor',
-    kind: 'processing' as const,
-    summary: 'Clips rasters to admin boundaries, stacks multi-source datasets onto a common grid, and computes zonal statistics per admin unit — exports a tidy CSV.',
-    tags: ['xarray', 'rioxarray', 'GADM', 'zonal stats', 'COG'],
-    runtime: 'Python · xarray',
+    label: 'Spatial processing',
+    description: 'Clip, stack, and summarize raster data over administrative boundaries.',
+    skills: [
+      {
+        name: 'Geospatial Cube Processor',
+        slug: 'skills/geospatial-cube-processor',
+        kind: 'processing',
+        summary: 'Clips rasters to admin boundaries, stacks multi-source datasets onto a common grid, and computes zonal statistics per admin unit — exports a tidy CSV.',
+        tags: ['xarray', 'rioxarray', 'GADM', 'zonal stats', 'COG'],
+        runtime: 'Python · xarray',
+      },
+    ],
   },
   {
-    name: 'Notebook Plots',
-    slug: 'skills/notebook-plots',
-    kind: 'visualization' as const,
-    summary: 'Writes interactive Plotly charts (time series, seasonal patterns, admin comparisons, spatial maps) into a Jupyter notebook and exports a standalone HTML file.',
-    tags: ['Plotly', 'Jupyter', 'time series', 'choropleth'],
-    runtime: 'Python · Plotly',
+    label: 'Modeling & simulation',
+    description: 'Run process-based crop models spatially across climate and soil datacubes.',
+    skills: [
+      {
+        name: 'Spatial Crop Modeler',
+        slug: 'skills/spatial-crop-modeler',
+        kind: 'modeling',
+        summary: 'Combines climate and soil datacubes with DSSAT to run spatially-explicit crop yield simulations, pixel by pixel, across a region.',
+        tags: ['DSSAT', 'ag-cube-cm', 'yield', 'planting date'],
+        runtime: 'Python · ag-cube-cm',
+      },
+    ],
   },
   {
-    name: 'Climate Dashboard',
-    slug: 'skills/climate-dashboard',
-    kind: 'visualization' as const,
-    summary: 'Builds a fully self-contained interactive HTML dashboard with KPI cards, Chart.js charts, region/year filters, and a sortable data table — no server needed.',
-    tags: ['Chart.js', 'HTML', 'dashboard', 'KPI', 'no-server'],
-    runtime: 'HTML · Chart.js',
+    label: 'Visualization & reporting',
+    description: 'Turn processed results into notebooks and shareable, browser-ready dashboards.',
+    skills: [
+      {
+        name: 'Notebook Plots',
+        slug: 'skills/notebook-plots',
+        kind: 'visualization',
+        summary: 'Writes interactive Plotly charts (time series, seasonal patterns, admin comparisons, spatial maps) into a Jupyter notebook and exports a standalone HTML file.',
+        tags: ['Plotly', 'Jupyter', 'time series', 'choropleth'],
+        runtime: 'Python · Plotly',
+      },
+      {
+        name: 'Climate Dashboard',
+        slug: 'skills/climate-dashboard',
+        kind: 'visualization',
+        summary: 'Builds a fully self-contained interactive HTML dashboard with KPI cards, Chart.js charts, region/year filters, and a sortable data table — no server needed.',
+        tags: ['Chart.js', 'HTML', 'dashboard', 'KPI', 'no-server'],
+        runtime: 'HTML · Chart.js',
+      },
+    ],
+  },
+  {
+    label: 'Metadata & cataloging',
+    description: 'Document datasets so they can be published to the Climate Data Hub catalog.',
+    skills: [
+      {
+        name: 'CDH Metadata',
+        slug: 'skills/cdh-metadata',
+        kind: 'metadata',
+        summary: 'Generates a valid Climate Data Hub YAML metadata record for a raster, vector, NetCDF, or Zarr dataset — ready for the CDH catalog.',
+        tags: ['YAML', 'CDH catalog', 'raster', 'NetCDF'],
+        runtime: 'YAML',
+      },
+    ],
   },
 ];
 ---
 
-<div class="cdh-catalog">
-  {SKILLS.map((s) => <SkillCard {...s} />)}
-</div>
+{CATEGORIES.map((category) => (
+  <div class="cdh-category">
+    <h3 class="cdh-category-label">{category.label}</h3>
+    <p class="cdh-category-desc">{category.description}</p>
+    <div class="cdh-catalog">
+      {category.skills.map((s) => <SkillCard {...s} />)}
+    </div>
+  </div>
+))}

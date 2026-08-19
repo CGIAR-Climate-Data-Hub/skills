@@ -3,7 +3,7 @@ export interface Props {
   name: string;
   slug: string;
   summary: string;
-  kind: 'pipeline' | 'download' | 'processing' | 'visualization';
+  kind: 'pipeline' | 'download' | 'processing' | 'modeling' | 'visualization' | 'metadata';
   tags: string[];
   runtime?: string;
 }
@@ -14,7 +14,9 @@ const kindLabel: Record<string, string> = {
   pipeline:      'End-to-end pipeline',
   download:      'Data ingestion',
   processing:    'Spatial processing',
+  modeling:      'Modeling',
   visualization: 'Visualization',
+  metadata:      'Metadata',
 };
 ---
 
