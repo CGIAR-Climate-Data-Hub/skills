@@ -1,0 +1,137 @@
+---
+export interface Props {
+  src: string;
+  kicker: string;
+  title: string;
+  description: string;
+  prompt?: string;
+  skillSlug: string;
+  skillLabel: string;
+}
+
+const { src, kicker, title, description, prompt, skillSlug, skillLabel } = Astro.props;
+---
+
+<figure class="cdh-spotlight">
+  <div class="cdh-spotlight-copy">
+    <p class="cdh-spotlight-kicker">{kicker}</p>
+    <h2 class="cdh-spotlight-title">{title}</h2>
+    <p class="cdh-spotlight-desc">{description}</p>
+    {prompt && <p class="cdh-spotlight-prompt">“{prompt}”</p>}
+    <a class="cdh-spotlight-link" href={`/skills/${skillSlug}/`}>
+      Full walkthrough: {skillLabel} <span aria-hidden="true">→</span>
+    </a>
+  </div>
+
+  <div class="cdh-spotlight-video">
+    <video src={src} controls preload="metadata" aria-label={title} />
+  </div>
+</figure>
+
+<style>
+  .cdh-spotlight {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    margin: 0 0 var(--space-8);
+    background: var(--cdh-surface);
+    border: 1px solid var(--cdh-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  [data-theme='dark'] .cdh-spotlight {
+    background: var(--sl-color-bg-sidebar);
+    border-color: var(--sl-color-hairline);
+  }
+
+  .cdh-spotlight-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-7) var(--space-6);
+  }
+
+  .cdh-spotlight-kicker {
+    font-family: var(--mono);
+    font-size: var(--font-size-2);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--cdh-brand-primary);
+    margin: 0;
+  }
+  [data-theme='dark'] .cdh-spotlight-kicker { color: var(--cdh-brand-accent); }
+
+  .cdh-spotlight-title {
+    font-family: var(--serif);
+    font-size: var(--font-size-9);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--cdh-blue-950);
+    margin: 0;
+  }
+  [data-theme='dark'] .cdh-spotlight-title { color: var(--sl-color-white); }
+
+  .cdh-spotlight-desc {
+    font-size: var(--font-size-5);
+    line-height: 1.6;
+    color: var(--cdh-grey-6);
+    margin: 0;
+  }
+  [data-theme='dark'] .cdh-spotlight-desc { color: var(--sl-color-gray-3); }
+
+  .cdh-spotlight-prompt {
+    font-family: var(--mono);
+    font-size: var(--font-size-3);
+    line-height: 1.6;
+    color: var(--cdh-grey-5);
+    border-inline-start: 2px solid var(--cdh-blue-300);
+    padding-inline-start: var(--space-3);
+    margin: var(--space-1) 0;
+  }
+  [data-theme='dark'] .cdh-spotlight-prompt { color: var(--sl-color-gray-4); }
+
+  .cdh-spotlight-link {
+    font-size: var(--font-size-4);
+    font-weight: 600;
+    color: var(--cdh-blue-700);
+    text-decoration: none;
+    margin-top: var(--space-2);
+  }
+  .cdh-spotlight-link:hover { text-decoration: underline; }
+  .cdh-spotlight-link span {
+    display: inline-block;
+    transition: transform 0.12s;
+  }
+  .cdh-spotlight-link:hover span { transform: translateX(3px); }
+
+  .cdh-spotlight-video {
+    position: relative;
+    background: var(--cdh-grey-8);
+    min-height: 320px;
+  }
+  .cdh-spotlight-video video {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  @media (max-width: 900px) {
+    .cdh-spotlight {
+      grid-template-columns: 1fr;
+    }
+    .cdh-spotlight-video {
+      aspect-ratio: 16 / 10;
+      min-height: 0;
+    }
+    .cdh-spotlight-video video {
+      position: static;
+      height: auto;
+      object-fit: initial;
+    }
+  }
+</style>

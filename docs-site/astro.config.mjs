@@ -36,44 +36,14 @@ export default defineConfig({
         {
           label: 'Skills',
           items: [
-            {
-              label: 'End-to-end pipelines',
-              items: [
-                { label: 'GCF Pipeline', slug: 'skills/gcf-pipeline' },
-              ],
-            },
-            {
-              label: 'Data acquisition',
-              items: [
-                { label: 'Climate Data Download', slug: 'skills/climate-data-download' },
-                { label: 'Soil Data Download', slug: 'skills/soil-data-download' },
-              ],
-            },
-            {
-              label: 'Spatial processing',
-              items: [
-                { label: 'Geospatial Cube Processor', slug: 'skills/geospatial-cube-processor' },
-              ],
-            },
-            {
-              label: 'Modeling & simulation',
-              items: [
-                { label: 'Spatial Crop Modeler', slug: 'skills/spatial-crop-modeler' },
-              ],
-            },
-            {
-              label: 'Visualization & reporting',
-              items: [
-                { label: 'Notebook Plots', slug: 'skills/notebook-plots' },
-                { label: 'Climate Dashboard', slug: 'skills/climate-dashboard' },
-              ],
-            },
-            {
-              label: 'Metadata & cataloging',
-              items: [
-                { label: 'CDH Metadata', slug: 'skills/cdh-metadata' },
-              ],
-            },
+            { label: 'GCF Pipeline', slug: 'skills/gcf-pipeline' },
+            { label: 'Climate Data Download', slug: 'skills/climate-data-download' },
+            { label: 'Soil Data Download', slug: 'skills/soil-data-download' },
+            { label: 'Geospatial Cube Processor', slug: 'skills/geospatial-cube-processor' },
+            { label: 'Notebook Plots', slug: 'skills/notebook-plots' },
+            { label: 'Climate Dashboard', slug: 'skills/climate-dashboard' },
+            { label: 'Spatial Crop Modeler', slug: 'skills/spatial-crop-modeler' },
+            { label: 'CDH Metadata', slug: 'skills/cdh-metadata' },
           ],
         },
         {

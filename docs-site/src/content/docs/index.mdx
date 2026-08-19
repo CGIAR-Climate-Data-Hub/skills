@@ -15,23 +15,18 @@ hero:
       variant: minimal
 ---
 
-import SkillsGrid from '../../components/SkillsGrid.astro';
-import ExampleVideo from '../../components/ExampleVideo.astro';
+import SkillsDirectory from '../../components/SkillsDirectory.astro';
+import Spotlight from '../../components/Spotlight.astro';
 import gcfExample from '../../assets/gcf_example.mp4';
 
-<p class="cdh-section-label">Examples</p>
-
-<ExampleVideo
+<Spotlight
   src={gcfExample}
-  kind="pipeline"
-  kindLabel="End-to-end pipeline"
+  kicker="GCF Pipeline · start here"
   title="One request, start to finish"
-  description="Watch the GCF Pipeline skill go from a plain-language request to an interactive dashboard — no code written by hand."
+  description="Download, spatial processing, and visualization, chained in one conversation — type a sentence, get an interactive dashboard."
   prompt="Show me accumulated precipitation for Kenya for the 2021 long rains season (March–May) at district level."
   skillSlug="skills/gcf-pipeline"
   skillLabel="GCF Pipeline"
 />
 
-<p class="cdh-section-label">Skills catalog</p>
-
-<SkillsGrid />
+<SkillsDirectory />

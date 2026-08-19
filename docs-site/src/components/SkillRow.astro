@@ -1,0 +1,34 @@
+---
+export interface Props {
+  name: string;
+  slug: string;
+  summary: string;
+  kind: 'pipeline' | 'download' | 'processing' | 'modeling' | 'visualization' | 'metadata';
+  kindLabel: string;
+  runtime?: string;
+}
+
+const { name, slug, summary, kind, kindLabel, runtime } = Astro.props;
+
+const ICONS: Record<string, string> = {
+  download: '<path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>',
+  processing: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  modeling: '<path d="M4 20l5-9 4 5 3-6 4 10"/>',
+  visualization: '<path d="M4 19h16M7 19V9m5 10V5m5 14v-7"/>',
+  metadata: '<path d="M7 3h8l4 4v14H7z"/><line x1="10" y1="11" x2="15" y2="11"/><line x1="10" y1="15" x2="15" y2="15"/>',
+  pipeline: '<path d="M4 12h4l2-6 4 12 2-6h4"/>',
+};
+---
+
+<a href={`/skills/${slug}/`} class="cdh-row">
+  <div class={`cdh-row-icon ${kind}`}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={ICONS[kind]} />
+  </div>
+  <div class="cdh-row-name-wrap">
+    <span class="cdh-row-name">{name}</span>
+    <span class="cdh-row-kind">{kindLabel}</span>
+  </div>
+  <span class="cdh-row-summary">{summary}</span>
+  {runtime && <span class="cdh-row-runtime">{runtime}</span>}
+  <span class="cdh-row-arrow" aria-hidden="true">→</span>
+</a>

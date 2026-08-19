@@ -1,0 +1,71 @@
+---
+import SkillRow from './SkillRow.astro';
+
+const SKILLS = [
+  {
+    name: 'Climate Data Download',
+    slug: 'skills/climate-data-download',
+    kind: 'download' as const,
+    kindLabel: 'Acquisition',
+    summary: 'CHIRPS, CHIRTS-ERA5, AgERA5, and NASA POWER data for any country or bounding box.',
+    runtime: 'Python · aggeodata',
+  },
+  {
+    name: 'Soil Data Download',
+    slug: 'skills/soil-data-download',
+    kind: 'download' as const,
+    kindLabel: 'Acquisition',
+    summary: 'SoilGrids soil properties across depth layers, stacked into a validated soil datacube.',
+    runtime: 'Python · aggeodata',
+  },
+  {
+    name: 'Geospatial Cube Processor',
+    slug: 'skills/geospatial-cube-processor',
+    kind: 'processing' as const,
+    kindLabel: 'Processing',
+    summary: 'Clips rasters to admin boundaries, stacks sources, exports zonal stats as a tidy CSV.',
+    runtime: 'Python · xarray',
+  },
+  {
+    name: 'Spatial Crop Modeler',
+    slug: 'skills/spatial-crop-modeler',
+    kind: 'modeling' as const,
+    kindLabel: 'Modeling',
+    summary: 'Runs DSSAT across climate and soil datacubes for spatially-explicit crop yield maps.',
+    runtime: 'Python · ag-cube-cm',
+  },
+  {
+    name: 'Notebook Plots',
+    slug: 'skills/notebook-plots',
+    kind: 'visualization' as const,
+    kindLabel: 'Visualization',
+    summary: 'Interactive Plotly charts written into a Jupyter notebook, plus a standalone HTML export.',
+    runtime: 'Python · Plotly',
+  },
+  {
+    name: 'Climate Dashboard',
+    slug: 'skills/climate-dashboard',
+    kind: 'visualization' as const,
+    kindLabel: 'Visualization',
+    summary: 'Self-contained HTML dashboard — KPI cards, filters, sortable table. No server needed.',
+    runtime: 'HTML · Chart.js',
+  },
+  {
+    name: 'CDH Metadata',
+    slug: 'skills/cdh-metadata',
+    kind: 'metadata' as const,
+    kindLabel: 'Metadata',
+    summary: 'Generates a valid CDH YAML metadata record for a dataset — ready for the catalog.',
+    runtime: 'YAML',
+  },
+];
+---
+
+<div class="cdh-directory-head">
+  <h2 class="cdh-directory-title">All skills</h2>
+  <span class="cdh-directory-count">{SKILLS.length} more, plus the pipeline above</span>
+</div>
+
+<div class="cdh-directory">
+  {SKILLS.map((s) => <SkillRow {...s} />)}
+</div>
