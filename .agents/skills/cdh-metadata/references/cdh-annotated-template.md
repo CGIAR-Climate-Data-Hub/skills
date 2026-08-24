@@ -1,4 +1,4 @@
-# CDH Metadata — Full Annotated YAML Template (v0.2.0)
+# CDH Metadata — Full Annotated YAML Template (v0.3.0)
 
 This is a complete reference template showing every field. Inline comments explain purpose,
 constraints, and examples. Fields not marked optional are required when the parent block is used.
@@ -10,17 +10,17 @@ Real catalog records: https://github.com/CGIAR-Climate-Data-Hub/cdh-catalog/tree
 # yaml-language-server: $schema=../../spec/schemas/profiles/cdh.schema.json
 
 # ── Schema declaration ────────────────────────────────────────────────────────
-"$schema": https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/schemas/profiles/cdh.schema.json
-cdh_schema_version: "v0.2.0"   # REQUIRED — always "v0.2.0"
+"$schema": https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/schemas/profiles/cdh.schema.json
+cdh_schema_version: "v0.3.0"   # REQUIRED — always "v0.3.0"
 
 # ── Extension declarations ────────────────────────────────────────────────────
 # List ONLY the extensions you actually use. cdh is always required for Hub records.
 extensions:
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/cdh/schema.json
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/datacube/schema.json
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/agriculture/schema.json
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/climate/schema.json
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/classification/schema.json
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions/cdh/schema.json
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions/datacube/schema.json
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions/agriculture/schema.json
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions/climate/schema.json
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions/classification/schema.json
 
 # ── Core identity ─────────────────────────────────────────────────────────────
 id: my-dataset-slug             # REQUIRED — lowercase letters, digits, hyphens only
@@ -40,9 +40,11 @@ version: "v1.0"                 # optional — version string (e.g. v1.0, 2020, 
 previous_version: ""            # optional — id of predecessor record when superseding
 
 # ── Series ────────────────────────────────────────────────────────────────────
-series:                         # optional — product family/series grouping
-  name: MapSPAM
-  url: https://mapspam.info
+series:                         # optional — program/initiative/product-brand grouping.
+  name: MapSPAM                 # Members may be heterogeneous (climate + production + boundaries
+  url: https://mapspam.info     # at once) — it's a discovery facet, NOT a product-family/version
+                                 # relationship (that's catalog position + processing[].derived_from).
+                                 # `name` is the grouping key — spell it identically across records.
 
 # ── Keywords ──────────────────────────────────────────────────────────────────
 keywords:                       # REQUIRED — at least one item; plain strings or linked objects
@@ -113,12 +115,14 @@ spatial:                        # optional — strongly recommended for geospati
   geography: [world]            # CDH geography vocab (UN M49 lower-kebab-case)
                                 # e.g. [world], [kenya, uganda], [ethiopia]
   geometry_column: "geometry"   # conditional — name of geometry column for vector data
-  resolution:
-    - type: xy                  # one of: xy | x | y | point | polygon
+  resolution:                   # exactly ONE characterization per record: a single entry, or an
+                                 # x + y pair when spacing differs per axis. Never mix a grid entry
+                                 # with point/polygon. `type` is required on every entry. The old
+                                 # per-entry `note` field was removed — use the record-level `note`.
+    - type: xy                  # one of: xy | x | y | point | polygon (REQUIRED)
       unit: degree
       value: 0.08333333
       label: "5 arc-minutes (~10km at equator)"
-      note: ""                  # optional
 
 # ── Temporal ─────────────────────────────────────────────────────────────────
 # Use `date` for a single instant/period OR `start_date`/`end_date` for a span.
@@ -132,17 +136,35 @@ temporal:
 # ── Datacube extension — Dimensions ───────────────────────────────────────────
 # Use when the data has meaningful named dimensions beyond lat/lon.
 # Cannot use "variable" as a dimension name (reserved for href_template).
+# Names must be unique across dimensions[] AND variables[] combined (shared namespace).
+#
+# type is lowercase, pattern ^[a-z][a-z0-9_-]*$. Reserved values:
+#   temporal — ISO 8601 axis; the only type allowed a `step`. Several are allowed (e.g. `season`
+#              inside a 20-year `period`).
+#   z        — vertical axis (depth/height/pressure); AT MOST ONE per record.
+#   location — a place-key column (admin/station code); any number allowed.
+# `spatial`/`geometry` are rejected (the grid always comes from top-level spatial:, never here).
+# Aliases of temporal (time, times, date, dates, datetime, timestamp) are rejected.
+# `bands` is NOT a dimension type — a multi-band file's bands belong in variables[].
 dimensions:
   - name: species
-    type: species               # any descriptive string; common: temporal | crop | species | technology | scenario
+    type: species               # non-reserved descriptive string; common: crop | species | technology | scenario
     description: "The livestock species for which the data is provided"
     values: [buffalo, cattle, chicken, goat, pig, sheep]
     reference_system: ""        # optional — vocabulary URI if values are controlled
-  - name: time
+  - name: period
     type: temporal
-    description: "Year of the data"
-    values: [2010, 2015, 2020]
-    step: P5Y                   # optional — ISO 8601 duration for temporal cadence (P1D=daily, P1M=monthly, P1Y=annual)
+    description: "20-year period the data represents"
+    # On type: temporal, every value MUST be an ISO 8601 date/instant STRING — bare numbers
+    # (2020) and range labels ("2020-2040") are rejected. A binned axis lists each bin's start;
+    # its length is the step (here, 20 years per bin).
+    values: ["2021", "2041"]
+    step: P20Y                  # ISO 8601 duration; only valid on type: temporal (P1D=daily, P1M=monthly, P1Y=annual)
+  - name: depth
+    type: z                     # vertical axis — at most one per record
+    description: "Soil depth"
+    values: ["0-5", "5-15", "15-30"]
+    unit: cm
 
 # ── Datacube extension — Variables ────────────────────────────────────────────
 variables:
@@ -151,6 +173,9 @@ variables:
     data_type: float32          # numpy-style dtype
     unit: "{head}/km2"          # UDUNITS-2 or UCUM; use {head} for dimensionless counts
     dimensions: []              # optional — which dimension axes this variable spans
+    nodata: 255                 # optional — overrides the asset-level data[].nodata for THIS
+                                 # variable only (e.g. a uint8 classification fill value beside a
+                                 # float32 measure filled with -9999 at the asset level)
     note: ""                    # optional — variable-specific caveats (dataset-wide → record note)
   - name: yield
     description: "Crop yield for each grid cell."
@@ -169,6 +194,7 @@ joins:
 
 # ── Classification extension ─────────────────────────────────────────────────
 # Use for categorical/classified variables. variable must match a variables[].name.
+# values[].value is a STRING or INTEGER only — floats and booleans are rejected.
 classes:
   - variable: land_cover
     values:
@@ -197,10 +223,17 @@ cdh:
   domain: [climate]             # REQUIRED — at least one domain value (CDH vocab)
                                 # options: adaptation | agricultural-production | boundaries |
                                 #          climate | hydrology | mitigation | socioeconomic
-  not_recommended_for:          # optional — discouraged uses to prevent misuse
-    - use: "Near-real-time weather monitoring"
-      reason: "Data is available with a 3-month lag"
-      use_instead: "CHIRPS-Prelim for near-real-time estimates"  # optional
+  usage:                        # optional — omit entirely if there's nothing to say (an empty
+                                 # `usage: {}` is rejected). BREAKING from v0.2.0: this replaced
+                                 # the old top-level cdh.not_recommended_for.
+    intended_uses:               # optional — free text; illustrative and NEVER exhaustive. A use
+                                  # left off isn't excluded, and a listed use isn't an endorsement.
+      - "national and sub-national hotspot mapping"
+      - "targeting of adaptation investment"
+    not_recommended_for:        # optional — discouraged uses to prevent misuse
+      - use: "Near-real-time weather monitoring"
+        reason: "Data is available with a 3-month lag"
+        use_instead: "CHIRPS-Prelim for near-real-time estimates"  # optional
 
 # ── Climate extension ─────────────────────────────────────────────────────────
 # Use for climate projection datasets (CMIP5/CMIP6 derived data).
@@ -267,6 +300,9 @@ data:
     media_type: "image/tiff; application=geotiff; profile=cloud-optimized"
 
 # ── Additional assets (non-data sidecars) ─────────────────────────────────────
+# roles is a suggested, open list — not a closed set. Common values: metadata, validation,
+# describedby, thumbnail, overview, visual, example (a runnable usage notebook/script/SQL file —
+# the place for a query a consumer needs but the data itself can't carry, e.g. a required join).
 additional_assets:              # optional — same name-uniqueness rules as data[]
   - name: dimension-codes
     locations:
@@ -280,6 +316,12 @@ additional_assets:              # optional — same name-uniqueness rules as dat
     locations:
       - url: https://example.com/data/thumbnail.png
     media_type: "image/png"
+  - name: usage-example
+    roles: [example]
+    locations:
+      - url: https://example.com/notebooks/join-to-boundaries.ipynb
+    description: "Notebook showing the required join to admin boundaries."
+    media_type: application/x-ipynb+json
 
 # ── Additional links ──────────────────────────────────────────────────────────
 additional_links:               # optional
@@ -300,11 +342,11 @@ The smallest record that passes CDH profile validation:
 
 ```yaml
 # yaml-language-server: $schema=../../spec/schemas/profiles/cdh.schema.json
-"$schema": https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/schemas/profiles/cdh.schema.json
-cdh_schema_version: "v0.2.0"
+"$schema": https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/schemas/profiles/cdh.schema.json
+cdh_schema_version: "v0.3.0"
 
 extensions:
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/cdh/schema.json
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions/cdh/schema.json
 
 id: my-dataset
 title: "My Dataset"
@@ -327,6 +369,26 @@ data:
 cdh:
   domain: [climate]
 ```
+
+---
+
+## Key v0.3.0 breaking changes (from v0.2.0)
+
+| What changed | v0.2.0 | v0.3.0 |
+|---|---|---|
+| Schema version | `"v0.2.0"` | `"v0.3.0"` |
+| Use guidance | `cdh.not_recommended_for` | moved to `cdh.usage.not_recommended_for`; new sibling `cdh.usage.intended_uses` |
+| `spatial.resolution[]` | any number of entries, mixed types allowed | **exactly one** characterization: a single entry, or an `x`+`y` pair only |
+| `spatial.resolution[].type` | optional | **required** on every entry |
+| `spatial.resolution[].note` | allowed | **removed** — use the record-level `note` |
+| `dimensions[].type: temporal` values | numbers or range labels accepted (e.g. `2020`, `"2020-2040"`) | must be ISO 8601 date/instant **strings** only |
+| `dimensions[]` / `variables[]` names | could collide across the two arrays | must be **unique across both arrays combined** |
+| `dimensions[].type` | `spatial` / `geometry` usable | **rejected**; use `z` (vertical axis, max 1) or `location` (place-key column) instead |
+| `dimensions[].type` casing/aliases | any casing; `time`/`date`/etc. accepted | lowercase only; temporal aliases **rejected** |
+| `variables[].nodata` | not defined | optional — per-variable override of the asset's `nodata` |
+| `classes[].values[].value` | any number or boolean | **string or integer only** |
+| `additional_assets[].roles` | open list, no suggested values | suggested values now include `example` (runnable usage notebook/script/SQL) |
+| `series` | ambiguous re: product-family grouping | explicitly a heterogeneous discovery facet, not a product-family/version relationship |
 
 ---
 

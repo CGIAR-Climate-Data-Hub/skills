@@ -14,14 +14,14 @@ description: >
 
 # CDH Metadata Generator
 
-You produce valid YAML metadata records for the CGIAR Climate Data Hub (CDH) standard **v0.2.0**.
+You produce valid YAML metadata records for the CGIAR Climate Data Hub (CDH) standard **v0.3.0**.
 Inspect the dataset automatically where possible, ask the user for fields you cannot derive, and
 write a YAML file that validates against the CDH schema.
 
-Schema root: `https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/schemas/profiles/cdh.schema.json`  
+Schema root: `https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/schemas/profiles/cdh.schema.json`  
 Official repository: `https://github.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard`  
 Real catalog records: `https://github.com/CGIAR-Climate-Data-Hub/cdh-catalog/tree/main/records`  
-Full annotated template: read `references/cdh-annotated-template.md` whenever you need to check
+Full annotated template: read `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/cdh-metadata/references/cdh-annotated-template.md` whenever you need to check
 a field, see all optional fields, or the user asks for a more complete record.
 
 ---
@@ -31,8 +31,8 @@ a field, see all optional fields, or the user asks for a more complete record.
 | Source | Fields |
 |--------|--------|
 | **File inspection** | bbox, CRS, spatial resolution, variable names, data types, nodata, file size, media type |
-| **Always ask** | id, title, description, license, contact (licensor), citation or DOI, data URLs, `cdh.domain` |
-| **Ask only if missing** | temporal dates, keywords, version, processing provenance, additional contacts, series |
+| **Always ask** | id, title, description, license, contact (licensor), citation or DOI, data URLs, `cdh.domain`, keywords |
+| **Ask only if missing** | temporal dates, version, processing provenance, additional contacts, series, `cdh.usage` |
 
 ---
 
@@ -136,18 +136,19 @@ answered, ask **Round 2** only for fields that are still missing.
 | `citation or DOI` | "Is there a DOI (bare format, e.g. `10.xxxx/...`) or structured citation (authors list, year, title, publisher, url)?" |
 | `data locations` | "Where is the data accessible? Provide HTTPS URL(s) or S3 path(s). If multiple formats (Zarr + COGs), list each separately with a short name (e.g. `zarr`, `cogs`)." |
 | `cdh.domain` | "CDH domain(s)? Options: `adaptation`, `agricultural-production`, `boundaries`, `climate`, `hydrology`, `mitigation`, `socioeconomic`" |
+| `keywords` | "At least one keyword — required by the schema. I'll suggest some from the variables; can optionally be linked to AGROVOC or another vocabulary." |
 
 **Round 2 — ask only if unknown:**
 
 | Field | Prompt |
 |-------|--------|
 | `temporal` | "Time period the data covers? Use a single value for a static dataset (e.g. `2020`) or start/end dates (YYYY-MM-DD). Is end date open-ended (ongoing)?" |
-| `keywords` | "Any keywords to add? I'll suggest some from the variables. Can optionally be linked to AGROVOC or other vocabularies." |
 | `version` | "Is this a versioned release? (e.g. `v1.0`, `2020`, `v2r2`)" |
-| `series` | "Does this belong to a product family/series? (e.g. MapSPAM, GLW, CHIRPS). If so, name and URL?" |
+| `series` | "Does this belong to a series — a program, initiative, or product brand (e.g. MapSPAM, GLW, CHIRPS)? Note: a series can hold heterogeneous datasets (climate, production, etc.) — it's a discovery grouping, not a product-family/version relationship. If so, name and URL?" |
 | `processing[source]` | "Where did the raw/source data originally come from? (URL or repository)" |
 | `spatial.geography` | "What geographic area does this cover? (country name, region, or `world`)" |
-| `not_recommended_for` | "Any uses this dataset is NOT suitable for? (optional; helps users avoid misuse)" |
+| `cdh.usage.intended_uses` | "What was this dataset produced for? (optional; free-text list, e.g. 'regional hotspot mapping'. Illustrative, not exhaustive — don't force it if nothing specific comes to mind.)" |
+| `cdh.usage.not_recommended_for` | "Any uses this dataset is NOT suitable for? (optional; each needs a reason, and can optionally suggest an alternative)" |
 
 Never block on optional fields. If the user says "I don't know" or skips a field, use `null`
 or omit it per the schema and move on.
@@ -181,15 +182,16 @@ named `<id>.yaml`.
 **Mandatory header lines:**
 ```yaml
 # yaml-language-server: $schema=../../spec/schemas/profiles/cdh.schema.json
-"$schema": https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/schemas/profiles/cdh.schema.json
-cdh_schema_version: "v0.2.0"
+"$schema": https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/schemas/profiles/cdh.schema.json
+cdh_schema_version: "v0.3.0"
 ```
 
-**Hard rules (v0.2.0):**
-- `cdh_schema_version`: always `"v0.2.0"`
+**Hard rules (v0.3.0):**
+- `cdh_schema_version`: always `"v0.3.0"`
 - `"$schema"`: always the CDH profile URL above
 - `extensions[]`: required — list every extension schema URL actually used (see below); always include the CDH extension
-- `created` / `updated`: today → `"2026-07-28"`
+- `created` / `updated`: today's date, e.g. `"2026-08-24"`
+- `keywords[]`: required — at least one entry (plain string or `{term, scheme, uri}` linked object)
 - `bbox`: 4-number array `[west, south, east, north]` — never a string
 - `crs`: EPSG string, e.g. `"EPSG:4326"`
 - `contact[]`: every entry must include `organization`; at least one entry must have `licensor` in its `roles` list; `roles` is an **array** (not a scalar)
@@ -201,6 +203,14 @@ cdh_schema_version: "v0.2.0"
 - Temporal cadence (daily, monthly, etc.) goes in `dimensions[]` with `type: temporal` and ISO 8601 `step` — NOT in `temporal:`
 - Do NOT write stray `null` values for fields that are simply omitted; only use `null` for explicitly nullable fields like open-ended `end_date`
 - `resource_type`: one of `dataset | software | service | document`
+- `spatial.resolution[]`: **exactly one characterization per record** — either a single entry, or an `x` + `y` pair when grid spacing differs on each axis. Never mix a grid entry with a `point`/`polygon` entry; a different-resolution representation of the same data is a separate record. Every entry requires `type`. The old per-entry `note` field is gone — put resolution caveats in the record-level `note` instead.
+- `dimensions[].type`: lowercase, pattern `^[a-z][a-z0-9_-]*$`. Reserved values: `temporal` (ISO 8601 axis, the only type allowed a `step`), `z` (vertical axis — depth/height/pressure — **at most one per record**), `location` (a place-key column, e.g. an admin or station code; any number allowed). `spatial` and `geometry` are rejected — the horizontal grid always comes from top-level `spatial`, never a dimension. Aliases `time`, `times`, `date`, `dates`, `datetime`, `timestamp` are rejected; only `temporal` produces a time axis. `bands` is not a dimension type — multi-band files use `variables[]` instead.
+- On a `type: temporal` dimension, every `values[]` entry must be an ISO 8601 date/instant **string** (`"2020"`, `"2020-06"`, `"2020-06-23"`). Bare numbers (`2020`) and range labels (`"2020-2040"`) are rejected. A binned axis lists each bin's start with its length as `step` (e.g. `values: ["2021", "2041"]`, `step: P20Y`); a cyclic label axis (`DJF`/`MAM`/`JJA`/`SON`) is not temporal — name it as a domain axis instead.
+- `dimensions[]` and `variables[]` names share one namespace and must be **unique across both arrays combined** — a duplicate silently overwrites its twin on encode.
+- `variables[].nodata`: optional — overrides the asset-level `data[].nodata` for that one variable, for stores where variables carry different fill values (e.g. a `float32` measure at `-9999` beside a `uint8` classification at `255`).
+- `cdh.usage`: optional object grouping use guidance — `intended_uses[]` (free text, illustrative not exhaustive) and `not_recommended_for[]` (`{use, reason, use_instead?}`). **Breaking from v0.2.0:** this replaced the old top-level `cdh.not_recommended_for`. Never emit an empty `usage: {}` — omit it entirely when there's nothing to say.
+- `classes[].values[].value` (classification extension): a **string or integer** only — floats and booleans are rejected.
+- `additional_assets[].roles` suggested values now include `example` (a runnable usage notebook/script/SQL file), alongside `metadata`, `validation`, `describedby`, `thumbnail`, `overview`, `visual`.
 
 **Media types by format:**
 
@@ -217,19 +227,19 @@ cdh_schema_version: "v0.2.0"
 **Extension URLs (add to `extensions[]` when the matching block is used):**
 ```
 # Always add — required for CDH Hub records:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/cdh/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions/cdh/schema.json
 
 # Add when using dimensions: / variables: blocks:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/datacube/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions/datacube/schema.json
 
 # Add when using commodities: field:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/agriculture/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions/agriculture/schema.json
 
 # Add when using climate: block:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/climate/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions/climate/schema.json
 
 # Add when using classes: field:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.2.0/extensions/classification/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions/classification/schema.json
 ```
 
 After writing, print the file path and show a 30-line preview.
@@ -252,16 +262,28 @@ For proprietary data use a plain string, e.g. `"FAO Internal Use Only"`.
 `licensor` | `producer` | `processor` | `point-of-contact` | `custodian`
 
 ### Spatial resolution type
-`xy` (regular grid, same x and y) | `x` | `y` | `point` | `polygon`
+`xy` (regular grid, same x and y) | `x` | `y` | `point` | `polygon`  
+Only one characterization per record: a single entry, or an `x` + `y` pair (never a grid entry
+alongside `point`/`polygon`). Every entry requires `type`.
 
 ### Common geography vocab values
 `world` | `africa` | `asia` | `latin-america-and-the-caribbean` | `sub-saharan-africa`  
 Country codes follow ISO 3166-1 alpha-2 lower-case or UN M49 names in the CDH vocab  
 (e.g. `ethiopia`, `colombia`, `kenya`). When in doubt, use country name in lower-kebab-case.
 
-### Dimension types (common)
-`temporal` | `crop` | `species` | `technology` | `scenario` | `bands`  
-Any descriptive string is valid — these are the most common.
+### Dimension types
+**Reserved (change how the dimension is read):**
+- `temporal` — axis of ISO 8601 dates/instants; the only type that may carry `step`. A record may declare several (e.g. `season` inside a 20-year `period`).
+- `z` — vertical axis (depth, height, pressure level); **at most one per record**.
+- `location` — a place-key column (admin/station code); any number allowed.
+
+`spatial` and `geometry` are rejected (the horizontal grid always comes from top-level `spatial`).
+Aliases of `temporal` (`time`, `times`, `date`, `dates`, `datetime`, `timestamp`) are rejected.
+`bands` is **not** a reserved dimension type — a multi-band file's bands are `variables[]`, not a dimension.
+
+**Common non-reserved (any descriptive lowercase string is valid):**
+`crop` | `species` | `technology` | `scenario`  
+Names must be unique across `dimensions[]` and `variables[]` combined (shared namespace).
 
 ---
 
