@@ -28,7 +28,7 @@ import Default from '@astrojs/starlight/components/Header.astro';
     display: flex;
     align-items: center;
     overflow: hidden;
-    background: color-mix(in srgb, var(--cdh-bg) 86%, transparent);
+    background: var(--cdh-tie-in-bg);
     border-bottom: 1px solid var(--cdh-border);
   }
   .cdh-tie-in a {
@@ -38,18 +38,12 @@ import Default from '@astrojs/starlight/components/Header.astro';
     font-family: var(--mono);
     font-size: var(--font-size-2);
     letter-spacing: 0.02em;
-    color: var(--cdh-grey-6);
+    color: var(--cdh-tie-in-fg);
     text-decoration: none;
   }
   .cdh-tie-in a:hover {
-    color: var(--cdh-blue-700);
+    color: var(--cdh-link);
     text-decoration: underline;
-  }
-  [data-theme='dark'] .cdh-tie-in {
-    border-bottom-color: var(--sl-color-hairline);
-  }
-  [data-theme='dark'] .cdh-tie-in a {
-    color: var(--sl-color-gray-4);
   }
 
   .cdh-header-main {

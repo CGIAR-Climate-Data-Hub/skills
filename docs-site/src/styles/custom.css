@@ -1,7 +1,10 @@
 /* ── Google Fonts ──────────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&family=Noto+Serif:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* ── CDH Hub design tokens (matched to cgiar-climate-data-hub.github.io) ── */
+/* ── CDH Hub raw palette (matched to cgiar-climate-data-hub.github.io) ──
+   These are theme-INVARIANT swatches. Anything that needs to flip between
+   light and dark goes through a semantic token in the next block instead —
+   never reference a raw swatch directly from a component. */
 :root {
   /* cdh-blue: primary interactive/link color across the Hub */
   --cdh-blue-950: #0c2c57;
@@ -17,6 +20,7 @@
   --cdh-terra-700: #b44a22;
   --cdh-terra-500: #cb6a3e;
   --cdh-terra-300: #e0a783;
+  --cdh-terra-150: #edc0a6;
   --cdh-terra-50:  #f3e4da;
 
   /* cgiar brand green + mint — reserved for the footer band and brand badge,
@@ -26,6 +30,7 @@
   --cdh-brand-accent:       #17f1bd;
   --cdh-brand-highlight:    #57fad3;
   --cdh-brand-lighter:      #065f4a;
+  --cdh-brand-muted:        #9ec9b8;
 
   /* neutrals */
   --cdh-grey-0: #fff;
@@ -37,11 +42,6 @@
   --cdh-grey-6: #555554;
   --cdh-grey-7: #393939;
   --cdh-grey-8: #1d1d1d;
-
-  --cdh-bg:            #f5f4f1;
-  --cdh-surface:        var(--cdh-grey-0);
-  --cdh-border:         #e7e6e3;
-  --cdh-border-strong:  #cfcecb;
 
   /* type */
   --serif: 'Noto Serif', 'Times New Roman', Georgia, serif;
@@ -80,16 +80,60 @@
   --cdh-tie-in-height: 28px;
 }
 
-/* ── Starlight overrides (light theme) ────────────────────────────
-   The Hub uses cdh-blue as its actual link/interactive color; the
-   green + mint pairing is brand-badge/footer only. Route Starlight's
+/* ── Semantic tokens — LIGHT (default) ─────────────────────────────
+   Starlight puts its DARK palette on bare :root and its light palette on
+   :root[data-theme='light']. Custom CSS is unlayered, so anything declared
+   here on bare :root beats BOTH of Starlight's layered blocks — which is
+   exactly how the dark theme used to end up with a cream page background
+   under near-white text. Every value below that differs between themes is
+   redeclared in the [data-theme='dark'] block; nothing theme-dependent is
+   left on bare :root alone. */
+:root {
+  --cdh-bg:            #f5f4f1;
+  --cdh-surface:       var(--cdh-grey-0);
+  --cdh-border:        #e7e6e3;
+  --cdh-border-strong: #cfcecb;
+  --cdh-hover-tint:    color-mix(in srgb, var(--cdh-blue-50) 60%, transparent);
+
+  /* ink */
+  --cdh-text-strong: var(--cdh-blue-950);      /* hero + section headings   */
+  --cdh-text-brand:  var(--cdh-brand-primary); /* skill names               */
+  --cdh-brand-ink:   var(--cdh-brand-primary); /* CGIAR-green kickers       */
+  --cdh-text-body:   var(--cdh-grey-6);
+  --cdh-text-muted:  var(--cdh-grey-5);
+  --cdh-link:        var(--cdh-blue-700);
+  --cdh-rule:        var(--cdh-blue-300);      /* quote/blockquote rules    */
+
+  /* the "← Climate Data Hub" tie-in bar */
+  --cdh-tie-in-bg: #edebe6;
+  --cdh-tie-in-fg: var(--cdh-grey-6);
+
+  /* per-kind chip tints — one tint + one ink per kind, shared by the hero
+     step badges (.cdh-card-kind) and the directory icons (.cdh-row-icon) */
+  --kind-pipeline-tint:      rgba(3, 53, 41, 0.09);
+  --kind-pipeline-ink:       var(--cdh-brand-primary);
+  --kind-download-tint:      rgba(25, 85, 166, 0.10);
+  --kind-download-ink:       var(--cdh-blue-700);
+  --kind-processing-tint:    rgba(6, 95, 74, 0.12);
+  --kind-processing-ink:     var(--cdh-brand-lighter);
+  --kind-visualization-tint: rgba(180, 74, 34, 0.11);
+  --kind-visualization-ink:  var(--cdh-terra-700);
+  --kind-modeling-tint:      rgba(110, 44, 18, 0.11);
+  --kind-modeling-ink:       var(--cdh-terra-900);
+  --kind-metadata-tint:      var(--cdh-grey-1);
+  --kind-metadata-ink:       var(--cdh-grey-7);
+}
+
+/* ── Starlight wiring (light) ──────────────────────────────────────
+   Scoped to [data-theme='light'] so the dark theme keeps Starlight's own
+   coherent near-black set (bg / bg-nav / bg-sidebar / code blocks all
+   agree). The Hub uses cdh-blue as its actual link/interactive color; the
+   green + mint pairing is brand-badge/footer only, so route Starlight's
    global accent through blue to match. */
 :root {
   --sl-color-accent-low:  var(--cdh-blue-50);
   --sl-color-accent:      var(--cdh-blue-700);
   --sl-color-accent-high: var(--cdh-blue-950);
-
-  --sl-color-bg: var(--cdh-bg);
 
   --sl-font-system:       var(--sans);
   --sl-font-system-mono:  var(--mono);
@@ -102,17 +146,60 @@
   --sl-nav-height: calc(3.5rem + var(--cdh-tie-in-height));
 }
 
+:root[data-theme='light'] {
+  --sl-color-bg: var(--cdh-bg);
+}
+
 @media (min-width: 50rem) {
   :root {
     --sl-nav-height: calc(4rem + var(--cdh-tie-in-height));
   }
 }
 
-/* ── Dark theme overrides ──────────────────────────────────────── */
-[data-theme='dark'] {
+/* ── Semantic tokens — DARK ────────────────────────────────────────
+   data-theme is always written explicitly ('light' or 'dark') by
+   Starlight's inline ThemeProvider script, so this selector is reliable
+   and needs no prefers-color-scheme fallback. */
+:root[data-theme='dark'] {
   --sl-color-accent-low:  var(--cdh-blue-950);
   --sl-color-accent:      var(--cdh-blue-300);
   --sl-color-accent-high: var(--cdh-blue-50);
+
+  --cdh-bg:            var(--sl-color-black);
+  --cdh-surface:       var(--sl-color-bg-sidebar);
+  --cdh-border:        var(--sl-color-hairline);
+  --cdh-border-strong: var(--sl-color-gray-5);
+  --cdh-hover-tint:    rgba(255, 255, 255, 0.04);
+
+  --cdh-text-strong: var(--sl-color-white);
+  --cdh-text-brand:  var(--sl-color-white);
+  --cdh-brand-ink:   var(--cdh-brand-accent);
+  /* One step up from the old gray-3/gray-4 pairing: gray-4 landed at ~2.6:1
+     on the near-black page, which is what made the small meta labels
+     (row kind, runtime, hero eyebrow) hard to read. gray-2 matches
+     Starlight's own body ink, gray-3 sits one legible step below it. */
+  --cdh-text-body:   var(--sl-color-gray-2);
+  --cdh-text-muted:  var(--sl-color-gray-3);
+  --cdh-link:        var(--cdh-blue-300);
+  --cdh-rule:        var(--cdh-blue-500);
+
+  --cdh-tie-in-bg: var(--sl-color-black);
+  --cdh-tie-in-fg: var(--sl-color-gray-3);
+
+  /* Light inks on low-opacity tints — the light-theme inks are all deep
+     enough to vanish against a near-black page. */
+  --kind-pipeline-tint:      rgba(23, 241, 189, 0.12);
+  --kind-pipeline-ink:       var(--cdh-brand-highlight);
+  --kind-download-tint:      rgba(99, 169, 254, 0.14);
+  --kind-download-ink:       var(--cdh-blue-150);
+  --kind-processing-tint:    rgba(158, 201, 184, 0.13);
+  --kind-processing-ink:     var(--cdh-brand-muted);
+  --kind-visualization-tint: rgba(224, 167, 131, 0.13);
+  --kind-visualization-ink:  var(--cdh-terra-300);
+  --kind-modeling-tint:      rgba(203, 106, 62, 0.16);
+  --kind-modeling-ink:       var(--cdh-terra-150);
+  --kind-metadata-tint:      rgba(255, 255, 255, 0.08);
+  --kind-metadata-ink:       var(--sl-color-gray-2);
 }
 
 /* ── Headings: Noto Serif ──────────────────────────────────────── */
@@ -129,7 +216,28 @@
   font-family: var(--serif);
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--cdh-blue-950) !important;
+  color: var(--cdh-text-strong) !important;
+}
+
+/* Starlight sizes the logo off --sl-nav-height:
+     height: calc(var(--sl-nav-height) - 2 * var(--sl-nav-pad-y))
+   We inflate that var by --cdh-tie-in-height so the fixed header box can
+   hold the tie-in bar — which also inflated the logo by the same 28px,
+   pushing it out of its row and into the "← Climate Data Hub" bar above.
+   Subtract the bar back out so the logo fills only the header row it
+   actually lives in. */
+.site-title img {
+  height: calc(
+    var(--sl-nav-height) - var(--cdh-tie-in-height) - 2 * var(--sl-nav-pad-y)
+  );
+}
+
+/* The mark is ~3.8:1, so at full row height it crowds the search box on a
+   narrow viewport. Cap the width and let object-fit letterbox it. */
+@media (max-width: 50rem) {
+  .site-title img {
+    max-width: 8.5rem;
+  }
 }
 
 /* ── Kind badge (shared by the hero steps and the skills directory) ── */
@@ -144,34 +252,12 @@
   flex-shrink: 0;
   margin-top: 2px;
 }
-.cdh-card-kind.pipeline {
-  background: rgba(3, 53, 41, 0.08);
-  color: var(--cdh-brand-primary);
-}
-.cdh-card-kind.download {
-  background: rgba(25, 85, 166, 0.08);
-  color: var(--cdh-blue-700);
-}
-.cdh-card-kind.processing {
-  background: rgba(101, 127, 114, 0.10);
-  color: var(--cdh-brand-lighter);
-}
-.cdh-card-kind.visualization {
-  background: rgba(180, 74, 34, 0.10);
-  color: var(--cdh-terra-700);
-}
-.cdh-card-kind.modeling {
-  background: rgba(110, 44, 18, 0.10);
-  color: var(--cdh-terra-900);
-}
-.cdh-card-kind.metadata {
-  background: var(--cdh-grey-1);
-  color: var(--cdh-grey-7);
-}
-[data-theme='dark'] .cdh-card-kind.metadata {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--sl-color-gray-2);
-}
+.cdh-card-kind.pipeline      { background: var(--kind-pipeline-tint);      color: var(--kind-pipeline-ink); }
+.cdh-card-kind.download      { background: var(--kind-download-tint);      color: var(--kind-download-ink); }
+.cdh-card-kind.processing    { background: var(--kind-processing-tint);    color: var(--kind-processing-ink); }
+.cdh-card-kind.visualization { background: var(--kind-visualization-tint); color: var(--kind-visualization-ink); }
+.cdh-card-kind.modeling      { background: var(--kind-modeling-tint);      color: var(--kind-modeling-ink); }
+.cdh-card-kind.metadata      { background: var(--kind-metadata-tint);      color: var(--kind-metadata-ink); }
 
 /* ── Skills directory (compact row list) ─────────────────────────── */
 .cdh-directory-head {
@@ -187,23 +273,20 @@
   font-size: var(--font-size-9);
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--cdh-blue-950);
+  color: var(--cdh-text-strong);
   margin: 0;
 }
-[data-theme='dark'] .cdh-directory-title { color: var(--sl-color-white); }
 
 .cdh-directory-count {
   font-family: var(--mono);
   font-size: var(--font-size-3);
-  color: var(--cdh-grey-5);
+  color: var(--cdh-text-muted);
   white-space: nowrap;
 }
-[data-theme='dark'] .cdh-directory-count { color: var(--sl-color-gray-4); }
 
 .cdh-directory {
   border-top: 1px solid var(--cdh-border);
 }
-[data-theme='dark'] .cdh-directory { border-color: var(--sl-color-hairline); }
 
 .cdh-row {
   display: grid;
@@ -217,14 +300,8 @@
   transition: background-color 0.12s;
 }
 .cdh-row:hover {
-  background: color-mix(in srgb, var(--cdh-blue-50) 60%, transparent);
+  background: var(--cdh-hover-tint);
   text-decoration: none;
-}
-[data-theme='dark'] .cdh-row {
-  border-color: var(--sl-color-hairline);
-}
-[data-theme='dark'] .cdh-row:hover {
-  background: rgba(255, 255, 255, 0.04);
 }
 
 .cdh-row-icon {
@@ -237,52 +314,47 @@
   flex-shrink: 0;
 }
 .cdh-row-icon svg { width: 17px; height: 17px; }
-.cdh-row-icon.pipeline { background: rgba(3, 53, 41, 0.08); color: var(--cdh-brand-primary); }
-.cdh-row-icon.download { background: var(--cdh-blue-50); color: var(--cdh-blue-700); }
-.cdh-row-icon.processing { background: rgba(101, 127, 114, 0.14); color: var(--cdh-brand-lighter); }
-.cdh-row-icon.modeling { background: rgba(110, 44, 18, 0.10); color: var(--cdh-terra-900); }
-.cdh-row-icon.visualization { background: rgba(180, 74, 34, 0.10); color: var(--cdh-terra-700); }
-.cdh-row-icon.metadata { background: var(--cdh-grey-1); color: var(--cdh-grey-7); }
-[data-theme='dark'] .cdh-row-icon.metadata { background: rgba(255, 255, 255, 0.08); color: var(--sl-color-gray-2); }
+.cdh-row-icon.pipeline      { background: var(--kind-pipeline-tint);      color: var(--kind-pipeline-ink); }
+.cdh-row-icon.download      { background: var(--kind-download-tint);      color: var(--kind-download-ink); }
+.cdh-row-icon.processing    { background: var(--kind-processing-tint);    color: var(--kind-processing-ink); }
+.cdh-row-icon.visualization { background: var(--kind-visualization-tint); color: var(--kind-visualization-ink); }
+.cdh-row-icon.modeling      { background: var(--kind-modeling-tint);      color: var(--kind-modeling-ink); }
+.cdh-row-icon.metadata      { background: var(--kind-metadata-tint);      color: var(--kind-metadata-ink); }
 
 .cdh-row-name-wrap { min-width: 0; }
 .cdh-row-name {
   font-family: var(--serif);
   font-weight: 600;
   font-size: var(--font-size-6);
-  color: var(--cdh-brand-primary);
+  color: var(--cdh-text-brand);
   display: block;
   line-height: 1.25;
 }
-[data-theme='dark'] .cdh-row-name { color: var(--sl-color-white); }
 
 .cdh-row-kind {
   font-size: var(--font-size-2);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--cdh-grey-5);
+  color: var(--cdh-text-muted);
 }
-[data-theme='dark'] .cdh-row-kind { color: var(--sl-color-gray-4); }
 
 .cdh-row-summary {
   font-size: var(--font-size-4);
   line-height: 1.4;
-  color: var(--cdh-grey-6);
+  color: var(--cdh-text-body);
 }
-[data-theme='dark'] .cdh-row-summary { color: var(--sl-color-gray-3); }
 
 .cdh-row-runtime {
   font-family: var(--mono);
   font-size: var(--font-size-2);
-  color: var(--cdh-grey-5);
+  color: var(--cdh-text-muted);
   white-space: nowrap;
   text-align: right;
 }
-[data-theme='dark'] .cdh-row-runtime { color: var(--sl-color-gray-4); }
 
 .cdh-row-arrow {
-  color: var(--cdh-blue-700);
+  color: var(--cdh-link);
   font-size: var(--font-size-5);
 }
 

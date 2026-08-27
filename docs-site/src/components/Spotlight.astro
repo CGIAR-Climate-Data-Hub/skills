@@ -38,10 +38,6 @@ const { src, kicker, title, description, prompt, skillSlug, skillLabel } = Astro
     border-radius: var(--radius-lg);
     overflow: hidden;
   }
-  [data-theme='dark'] .cdh-spotlight {
-    background: var(--sl-color-bg-sidebar);
-    border-color: var(--sl-color-hairline);
-  }
 
   .cdh-spotlight-copy {
     display: flex;
@@ -58,44 +54,40 @@ const { src, kicker, title, description, prompt, skillSlug, skillLabel } = Astro
     font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--cdh-brand-primary);
+    color: var(--cdh-brand-ink);
     margin: 0;
   }
-  [data-theme='dark'] .cdh-spotlight-kicker { color: var(--cdh-brand-accent); }
 
   .cdh-spotlight-title {
     font-family: var(--serif);
     font-size: var(--font-size-9);
     font-weight: 600;
     letter-spacing: -0.01em;
-    color: var(--cdh-blue-950);
+    color: var(--cdh-text-strong);
     margin: 0;
   }
-  [data-theme='dark'] .cdh-spotlight-title { color: var(--sl-color-white); }
 
   .cdh-spotlight-desc {
     font-size: var(--font-size-5);
     line-height: 1.6;
-    color: var(--cdh-grey-6);
+    color: var(--cdh-text-body);
     margin: 0;
   }
-  [data-theme='dark'] .cdh-spotlight-desc { color: var(--sl-color-gray-3); }
 
   .cdh-spotlight-prompt {
     font-family: var(--mono);
     font-size: var(--font-size-3);
     line-height: 1.6;
-    color: var(--cdh-grey-5);
-    border-inline-start: 2px solid var(--cdh-blue-300);
+    color: var(--cdh-text-muted);
+    border-inline-start: 2px solid var(--cdh-rule);
     padding-inline-start: var(--space-3);
     margin: var(--space-1) 0;
   }
-  [data-theme='dark'] .cdh-spotlight-prompt { color: var(--sl-color-gray-4); }
 
   .cdh-spotlight-link {
     font-size: var(--font-size-4);
     font-weight: 600;
-    color: var(--cdh-blue-700);
+    color: var(--cdh-link);
     text-decoration: none;
     margin-top: var(--space-2);
   }
