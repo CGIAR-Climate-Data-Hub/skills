@@ -195,7 +195,7 @@ cdh_schema_version: "v0.3.0"
 - `bbox`: 4-number array `[west, south, east, north]` — never a string
 - `crs`: EPSG string, e.g. `"EPSG:4326"`
 - `contact[]`: every entry must include `organization`; at least one entry must have `licensor` in its `roles` list; `roles` is an **array** (not a scalar)
-- `citation`: structured object with `authors` (array), `date`, and optionally `title`, `publisher`, `url` — NOT a plain string
+- `citation`: structured object with `authors` (array), `date`, and optionally `title`, `publisher`, `url` — NOT a plain string. Same shape applies to `related_publications[].citation` — it is not a bare string or DOI there either; use `related_publications[].doi` for a bare DOI instead
 - `doi`: bare DOI only (e.g. `10.7910/DVN/SWPENT`) — no `https://doi.org/` prefix
 - `data[]`: each entry must have a unique `name` field
 - `processing[]`: if present, at least one step must have `id: source`
