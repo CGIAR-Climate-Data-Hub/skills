@@ -22,7 +22,9 @@ Schema root: `https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.
 Official repository: `https://github.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard`  
 Real catalog records: `https://github.com/CGIAR-Climate-Data-Hub/cdh-catalog/tree/main/records`  
 Full annotated template: read `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/cdh-metadata/references/cdh-annotated-template.md` whenever you need to check
-a field, see all optional fields, or the user asks for a more complete record.
+a field, see all optional fields, or the user asks for a more complete record.  
+Authoring guide: read `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard/main/spec/authoring-guide.md` when you need what a
+field *means* rather than what shape it takes — see **Reference** at the end of this file.
 
 ---
 
@@ -31,8 +33,15 @@ a field, see all optional fields, or the user asks for a more complete record.
 | Source | Fields |
 |--------|--------|
 | **File inspection** | bbox, CRS, spatial resolution, variable names, data types, nodata, file size, media type |
-| **Always ask** | id, title, description, license, contact (licensor), citation or DOI, data URLs, `cdh.domain`, keywords |
+| **Always ask** | id, title, description, license, contact (licensor), citation or DOI, data URLs, `cdh.domain`, keywords, `commodities` and `climate.*` where they apply, and the *meaning*, units, and caveats of each variable |
 | **Ask only if missing** | temporal dates, version, processing provenance, additional contacts, series, `cdh.usage` |
+
+Inspection gives you the technical shape of a file; it cannot tell you what the data *means*. That
+line is what the "always ask" row is drawn along — catalog reviewers can fill technical facts from
+the assets themselves, but nobody downstream can recover authorial intent. Variable *names* come
+from the file; what a variable measures, its units, and its caveats have to come from the user. A
+record listing `hsd: float32` with no indication that it counts heat-stress days is schema-valid
+and useless to the next person who finds it.
 
 ---
 
@@ -152,6 +161,25 @@ answered, ask **Round 2** only for fields that are still missing.
 
 Never block on optional fields. If the user says "I don't know" or skips a field, use `null`
 or omit it per the schema and move on.
+
+**What makes a good answer.** The schema accepts weak values, so this is where records quietly lose
+their worth. Each rule below exists for the same reason: a fact stored in the wrong place stops
+being findable.
+
+- `description` — say what the resource is and what it can be used for. Keep filterable facts out of
+  it (variables, units, geographies, dates); they belong in their structured fields, where people
+  and machines can actually filter on them. A description is not a substitute for the schema.
+- `keywords` — extra search terms only: aliases, method names, acronyms, user-facing phrasing. Do
+  not repeat anything that already has a structured field; route it instead — places →
+  `spatial.geography`, crops or livestock → `commodities`, coverage period → `temporal`, cadence →
+  `dimensions[]` (`type: temporal`).
+- `cdh.usage` — terms like "research" or "decision-making" are too broad to guide anyone, so skip
+  them. `not_recommended_for` is usually the more valuable half: it prevents misuse without
+  narrowing the legitimate uses, especially when each entry carries a reason.
+- `id` — keep the version out of it. The unversioned `id` always names the current release.
+
+When a field's intent is unclear, or a value would pass validation but read poorly, consult the
+authoring guide (see **Reference**) rather than guessing.
 
 ---
 
@@ -289,8 +317,25 @@ Names must be unique across `dimensions[]` and `variables[]` combined (shared na
 
 ## Reference
 
-Read `references/cdh-annotated-template.md` for the full YAML template with every optional field
-annotated. Use it when:
+Two documents back this skill, and they answer different questions. Pick by what you are actually
+stuck on: **the template shows you the slot, the guide tells you what belongs in it.**
+
+**`references/cdh-annotated-template.md`** — *what fields exist and what shape they take.*
+The full YAML template with every optional field annotated. Read it when:
 - The user asks about a specific field you're unsure of
 - The dataset warrants a more complete record (climate projections, livestock, crop data)
 - You need examples of `dimensions`, `variables`, `classes`, `climate`, or `commodities` blocks
+
+**CDH authoring guide** — *what a field means and what a good value looks like.*
+`https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard/main/spec/authoring-guide.md`
+Read it when:
+- You are unsure whether a field applies at all, or whether to omit it. Its *What To Leave Out*
+  rule: drop a field when it does not apply, when the value would only repeat another field, or
+  when it is unknown and not required — and avoid inventing new fields, since `additional_links`,
+  `additional_assets`, a sidecar, or an extension already cover the gap.
+- A value would validate but read poorly, and you want the intent behind the field
+- The user is superseding or versioning an existing Hub record
+- You want a pre-submission checklist to verify the finished record against (*Validation Checklist*)
+
+Where the two appear to disagree, the template describes the current schema and the guide describes
+authorial intent: follow the template for structure, the guide for content.
