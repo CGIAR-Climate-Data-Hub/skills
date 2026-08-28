@@ -1,0 +1,56 @@
+---
+/**
+ * Inline demo video for a skill page.
+ *
+ * Unlike Spotlight (landing page, copy beside a cropped video), this renders
+ * the clip at its true aspect ratio inside the docs column, so nothing is cut
+ * off. Source clips are 852x480; `ratio` overrides that if a future clip
+ * differs.
+ */
+export interface Props {
+  src: string;
+  /** Accessible name for the player — describe the clip, not the page. */
+  title: string;
+  /** Optional visible caption below the frame. */
+  caption?: string;
+  /** Intrinsic aspect ratio, as a CSS `aspect-ratio` value. */
+  ratio?: string;
+}
+
+const { src, title, caption, ratio = '852 / 480' } = Astro.props;
+---
+
+<figure class="cdh-video">
+  <div class="cdh-video-frame" style={`aspect-ratio: ${ratio};`}>
+    <video src={src} controls preload="metadata" playsinline aria-label={title}></video>
+  </div>
+  {caption && <figcaption class="cdh-video-caption">{caption}</figcaption>}
+</figure>
+
+<style>
+  .cdh-video {
+    margin: var(--space-5) 0 var(--space-6);
+  }
+
+  .cdh-video-frame {
+    /* Near-black in both themes: it reads as the letterbox around the clip
+       rather than as a panel, so it should not follow the page surface. */
+    background: var(--cdh-grey-8);
+    border: 1px solid var(--cdh-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .cdh-video-frame video {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .cdh-video-caption {
+    margin-top: var(--space-2);
+    font-size: var(--font-size-4);
+    line-height: 1.5;
+    color: var(--cdh-text-muted);
+  }
+</style>

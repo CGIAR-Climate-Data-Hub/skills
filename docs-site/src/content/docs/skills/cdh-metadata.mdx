@@ -6,6 +6,8 @@ sidebar:
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
+import SkillVideo from '../../../components/SkillVideo.astro';
+import metadataDemo from '../../../assets/CDMetadataskill.mp4';
 
 <Tabs>
 <TabItem label="Explanation">
@@ -20,9 +22,24 @@ You point the agent at a geospatial file. It inspects it automatically, asks you
 cannot derive, shows you a plan, and writes a `.yaml` file that validates against the
 [CDH metadata schema](https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.1.0/schemas/core.schema.json).
 
-The skill handles **GeoTIFF, NetCDF, Zarr, GeoPackage, Shapefile, FlatGeobuf, and Parquet** inputs.
+## What is CDH metadata?
+
+A CDH metadata record is a single YAML file that describes a dataset well enough for someone to
+find, understand, cite, and access it without opening the files. The standard is STAC-inspired but
+defines its own profile for climate and agriculture research: a set of core fields (`id`, `title`,
+`description`, `resource_type`, `license`, `contact`, `citation`, `data`), a `cdh:` block carrying
+the domain and usage guidance, and conditional sections — `spatial`, `temporal`, `variables`,
+`dimensions`, `processing`, `climate`, `commodities` — that apply only to the kinds of data they
+describe. Some fields are always required; others become required depending on what you are
+submitting.
+
+For the full field-by-field reference — what each field means, which are required when, and the
+controlled vocabularies they accept — see the
+[CDH metadata authoring guide](https://github.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard/blob/main/spec/authoring-guide.md).
 
 ## What auto-extracts vs. what you answer
+
+The skill handles **GeoTIFF, NetCDF, Zarr, GeoPackage, Shapefile, FlatGeobuf, and Parquet** inputs.
 
 | Source | Fields filled automatically |
 |--------|-----------------------------|
@@ -79,10 +96,18 @@ which blocks are used:
 | `climate` | When a `climate:` block is included |
 | `classification` | When a `classes:` field is present |
 
+## Watch it run
+
+<SkillVideo
+  src={metadataDemo}
+  title="The cdh-metadata skill generating a YAML metadata record"
+  caption="The cdh-metadata skill run end to end (1:34)."
+/>
+
 </TabItem>
 <TabItem label="Claude Code">
 
-Complete the [Claude Code setup](../usage/claude-code/) first, then launch `claude` from the project root.
+Complete the [Claude Code setup](../../usage/claude-code/) first, then launch `claude` from the project root.
 
 **Example request — GeoTIFF**
 
@@ -128,7 +153,7 @@ YAML — it does not require `aggeodata` to be installed.
 </TabItem>
 <TabItem label="Antigravity">
 
-Complete the [Antigravity setup](../usage/antigravity/) first, then paste the system prompt below.
+Complete the [Antigravity setup](../../usage/antigravity/) first, then paste the system prompt below.
 
 **System prompt**
 
@@ -178,7 +203,7 @@ CIMMYT, CC0-1.0. Domain: agricultural-production
 </TabItem>
 <TabItem label="Codex">
 
-Complete the [OpenAI Codex setup](../usage/codex/) first (install dependencies, configure the agent), then paste the system prompt below.
+Complete the [OpenAI Codex setup](../../usage/codex/) first (install dependencies, configure the agent), then paste the system prompt below.
 
 **System prompt**
 
