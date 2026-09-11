@@ -143,7 +143,7 @@ answered, ask **Round 2** only for fields that are still missing.
 | `license` | "License? Common: `CC-BY-4.0`, `CC-BY-SA-4.0`, `CC0-1.0`. Or enter a custom string." |
 | `contact (licensor)` | "Who is the licensor? Provide: organization name (required), and optionally name, email, URL. Which role(s)? Options: `licensor`, `producer`, `processor`, `point-of-contact`, `custodian`." |
 | `citation or DOI` | "Is there a DOI (bare format, e.g. `10.xxxx/...`) or structured citation (authors list, year, title, publisher, url)?" |
-| `data locations` | "Where is the data accessible? Provide HTTPS URL(s) or S3 path(s). If multiple formats (Zarr + COGs), list each separately with a short name (e.g. `zarr`, `cogs`)." |
+| `data locations` | "Where is the data accessible? Provide HTTPS URL(s) or S3 path(s). If multiple formats (Zarr + COGs), list each separately with a short name (e.g. `zarr`, `cogs`). I will resolve each URL before writing the record." |
 | `cdh.domain` | "CDH domain(s)? Options: `adaptation`, `agricultural-production`, `boundaries`, `climate`, `hydrology`, `mitigation`, `socioeconomic`" |
 | `keywords` | "At least one keyword — required by the schema. I'll suggest some from the variables; can optionally be linked to AGROVOC or another vocabulary." |
 
@@ -183,7 +183,78 @@ authoring guide (see **Reference**) rather than guessing.
 
 ---
 
-## Stage 3 — Confirm the plan
+## Stage 3 — Verify every link
+
+A record can validate against the schema and still ship dead URLs. Before you show the user a
+summary, resolve **every** URL the record will contain. A broken link in a catalogue record is
+worse than a missing one: it looks authoritative and sends the next person nowhere.
+
+**Never present a link as verified unless you resolved it in this session.**
+
+### What to check
+
+| Link | Usually comes from | A failure is |
+|------|--------------------|--------------|
+| `assets.*.locations[].url` (the data itself) | user | blocking |
+| `doi` — resolve `https://doi.org/<doi>` | user | blocking |
+| `citation.url`, `related_publications[].citation.url` | user or drafted | blocking |
+| `series.url`, `processing[].source`, `processing[].recipe.url` | often drafted | blocking |
+| `contacts[].url` | user | warning |
+| `additional_links[].url`, `additional_assets[].locations[].url` | user | warning |
+| `"$schema"` and every `extensions[]` URL | this skill | blocking — a dead schema URL makes the record unusable to every downstream tool |
+
+`s3://` URIs cannot be resolved over HTTP. Check the matching HTTPS endpoint where one exists,
+otherwise report the URI as **unchecked** rather than ok.
+
+### How to check
+
+Issue a HEAD request; if the host answers 403/405/501, retry with a ranged GET
+(`Range: bytes=0-0`) before concluding anything. Then classify:
+
+| Result | Meaning | Action |
+|--------|---------|--------|
+| 2xx | live | keep |
+| 3xx | moved | follow it, record the **final** URL, and tell the user you did |
+| 401 / 403 after GET retry | reachable but gated | keep, and say in the record that access is restricted |
+| 404 / 410 | dead | see below |
+| DNS failure / timeout | unreachable | see below |
+
+### When a link fails
+
+- **You drafted it** → drop the field. Never keep a URL you produced from memory and could not
+  resolve; a plausible-looking dead link is the worst outcome of this whole skill.
+- **The user supplied it** → ask once with the status code quoted, e.g. *"`https://…` returned 404 —
+  is the data not uploaded yet, or is the URL wrong?"* Do not silently fix it, and do not silently
+  keep it.
+- **The data is not published yet** → this is normal, not a failure. Authors routinely write the
+  record before the upload lands. Keep the URL exactly as given, say in your summary that it is
+  **not yet resolvable**, and move on. Never block a record on a deliberate forward reference, and
+  never quietly delete the URL the author intends to publish at.
+- **A schema or extension URL** → stop. Do not write the record. Report which URL failed; the
+  standard may have moved and the skill needs updating.
+
+### When you have no network access
+
+Say so plainly, list every URL you could not check, and mark the record **LINKS UNVERIFIED** in
+your summary to the user. Do not describe unchecked links as working, and do not quietly skip
+this stage.
+
+### Report
+
+Print the results before moving on:
+
+```
+Links checked (n):
+  ok        200  https://data.example.org/chirts/tmax.zarr
+  moved     301  https://old.example.org/doc  ->  https://new.example.org/doc
+  gated     403  https://api.example.org/private
+  DEAD      404  https://example.org/typo.tif        (user-supplied - needs a decision)
+  unchecked  -   s3://bucket/path                    (no HTTPS equivalent given)
+```
+
+---
+
+## Stage 4 — Confirm the plan
 
 Show a compact summary before writing the file:
 
@@ -195,6 +266,7 @@ Temporal: <date or start_date → end_date>
 Spatial:  [<west>, <south>, <east>, <north>] — <crs>
 Domain:   <domain>
 Data:     <url(s)>
+Links:    <n> ok, <n> moved, <n> gated, <n> DEAD, <n> unchecked
 Output:   <output_path>/<id>.yaml
 ```
 
@@ -202,7 +274,7 @@ Ask: **"Does this look right? I'll generate the YAML."**
 
 ---
 
-## Stage 4 — Generate the YAML
+## Stage 5 — Generate the YAML
 
 Write the file to the **same directory as the dataset** (or the directory the user specifies),
 named `<id>.yaml`.
@@ -271,6 +343,8 @@ https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.3.0/extensions
 ```
 
 After writing, print the file path and show a 30-line preview.
+
+Then re-read the finished file and confirm that every URL in it is one you resolved in Stage 3 — including any `$schema` or `extensions[]` URL you added while generating. If a URL appears in the file that was never checked, check it now or flag it to the user. The record is not finished while it contains an unverified link.
 
 ---
 
