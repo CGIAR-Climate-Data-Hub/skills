@@ -65,6 +65,13 @@ The spatial aggregation loop dominates runtime. 2–3 years is fast (~1–2 min)
 :::
 
 </TabItem>
+
+<TabItem label="Agents">
+
+Run the skill inside the coding agent you already use. Each one needs its setup done once; after that
+the trigger phrases are the same everywhere.
+
+<Tabs>
 <TabItem label="Claude Code">
 
 Complete the [Claude Code setup](../../usage/claude-code/) first, then launch `claude` from the project root.
@@ -223,6 +230,9 @@ Output to D:/tmp/bolivia_climate
 | Codex cannot access URLs | Enable internet access in Codex settings |
 | `ModuleNotFoundError: aggeodata` | Run the pip install in the [setup guide](../../usage/codex/) |
 | Agent invents code | Verify the system prompt was saved and the fetch succeeded |
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>

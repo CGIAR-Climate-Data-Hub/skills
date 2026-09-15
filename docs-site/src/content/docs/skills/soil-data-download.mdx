@@ -59,6 +59,13 @@ EPSG:4326. The skill always validates it with three checks (CRS bounds, flat-for
 reshape if needed, variable completeness) before returning.
 
 </TabItem>
+
+<TabItem label="Agents">
+
+Run the skill inside the coding agent you already use. Each one needs its setup done once; after that
+the trigger phrases are the same everywhere.
+
+<Tabs>
 <TabItem label="Claude Code">
 
 Complete the [Claude Code setup](../../usage/claude-code/) first, then launch `claude` from the project root.
@@ -182,6 +189,9 @@ Download SoilGrids data for Malawi (clay, sand, silt, SOC, pH, wv0010, wv0033,
 wv1500) at all five standard depths. Save to /tmp/data/malawi/soil_raw and build
 a validated cube at /tmp/data/malawi/soil_malawi.nc.
 ```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>

@@ -5,7 +5,7 @@ sidebar:
   order: 8
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Tabs, TabItem, LinkCard, Aside } from '@astrojs/starlight/components';
 import SkillVideo from '../../../components/SkillVideo.astro';
 import metadataDemo from '../../../assets/CDMetadataskill.mp4';
 
@@ -104,7 +104,57 @@ which blocks are used:
   caption="The cdh-metadata skill run end to end (1:34)."
 />
 
+## Run it in a notebook
+
+If you would rather not install an agent at all, the same skill runs in a **Google Colab notebook**.
+A Gemini agent loads `cdh-metadata`, interviews you about your dataset, and hands back the finished
+YAML — everything happens in the browser.
+
+<LinkCard
+  title="Open the CDH Metadata Assistant in Colab"
+  description="Answer a short questionnaire, get a schema-validated CDH record. No local install."
+  href="https://colab.research.google.com/github/CGIAR-Climate-Data-Hub/skills/blob/main/notebooks/CDH_metadata_example.ipynb"
+/>
+
+[View the notebook on GitHub](https://github.com/CGIAR-Climate-Data-Hub/skills/blob/main/notebooks/CDH_metadata_example.ipynb)
+· [download the `.ipynb`](https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/notebooks/CDH_metadata_example.ipynb)
+to run it in JupyterLab instead.
+
+**What you need.** A free [Gemini API key](https://aistudio.google.com/apikey), saved in Colab under
+**Secrets** as `GOOGLE_API_KEY` with notebook access enabled. Free-tier keys are enough: the agent
+batches its questions, so a full record costs four to six API calls.
+
+**How it runs.**
+
+1. **Runtime ▸ Run all.** The setup cells install the SDK, download the `cdh-metadata` skill, and
+   create the agent.
+2. Describe your dataset in the `PROMPT` cell, then **answer the questions** in the chat box as they
+   appear. Where the agent proposes a value, pressing Enter on an empty box accepts it.
+3. Run the last cell to **print, validate, and download** your `.yaml`.
+
+**Two checks run on your machine, not in the agent's sandbox** — which has neither a keyboard nor
+open internet access:
+
+| Tool | What it does |
+|------|--------------|
+| `check_url` | Resolves every URL headed for the record — yours and the ones the agent drafted. A drafted link that does not resolve is dropped; one of yours that fails comes back to you with its status code. |
+| `validate_record` | Validates the finished YAML against the published CDH JSON schema and returns the exact errors. The agent may not call the record finished until this passes. |
+
+<Aside type="caution" title="Describe your dataset, don't point at a local file">
+The agent runs in a Google-hosted sandbox that cannot see your Colab filesystem, so it cannot open a
+local path and measure the bbox, CRS or dtypes itself. The notebook works best for a **public dataset
+or URL** you can name. For a local file, run the inspection snippet from Stage 1 yourself and paste
+the numbers into your answers — or use one of the agents in the next tab, which read the file directly.
+</Aside>
+
 </TabItem>
+
+<TabItem label="Agents">
+
+Run the skill inside the coding agent you already use. Each one needs its setup done once; after that
+the trigger phrases are the same everywhere.
+
+<Tabs>
 <TabItem label="Claude Code">
 
 Complete the [Claude Code setup](../../usage/claude-code/) first, then launch `claude` from the project root.
@@ -251,6 +301,9 @@ CIMMYT, CC0-1.0. Domain: agricultural-production
 | Codex cannot access URLs | Enable internet access in Codex settings |
 | `ModuleNotFoundError: rasterio` | Run `pip install rasterio xarray geopandas pyyaml` |
 | Agent invents the YAML without asking questions | Verify the system prompt was saved and the fetch succeeded |
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>
