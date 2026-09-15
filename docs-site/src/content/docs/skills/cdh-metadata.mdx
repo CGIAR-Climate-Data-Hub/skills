@@ -137,7 +137,7 @@ open internet access:
 
 | Tool | What it does |
 |------|--------------|
-| `check_url` | Resolves every URL headed for the record — yours and the ones the agent drafted. A drafted link that does not resolve is dropped; one of yours that fails comes back to you with its status code. |
+| `check_urls` | Resolves every URL headed for the record in one batch — yours and the ones the agent drafted. A drafted link that does not resolve is dropped; one of yours that fails comes back to you with its status code. |
 | `validate_record` | Validates the finished YAML against the published CDH JSON schema and returns the exact errors. The agent may not call the record finished until this passes. |
 
 <Aside type="caution" title="Describe your dataset, don't point at a local file">
