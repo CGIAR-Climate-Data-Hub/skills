@@ -15,5 +15,5 @@ cdh-metadata-workspace/
 .claude/skills/gcf-pipeline-workspace/
 
 climate_agent_colab_gemini.ipynb
-
+scripts/convert_legacy_cubes.py
 skills/gcf-pipeline-workspace/
