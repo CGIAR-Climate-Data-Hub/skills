@@ -1,0 +1,47 @@
+{
+  "skill": "cdh-metadata-verify",
+  "description": "Realistic prompts that should trigger the skill, with the behaviour a correct run shows.",
+  "evals": [
+    {
+      "name": "verify a freshly generated record before submission",
+      "prompt": "I just wrote records/worldcover-admin/worldcover-admin.yaml with the cdh-metadata skill. Check it is actually correct before I submit it to the catalog.",
+      "expected_behaviour": [
+        "Runs scripts/verify_record.py on the file (with --standard-dir when a clone of cdh-metadata-standard is available) and reads the findings.",
+        "Opens the data assets the record points at (Parquet/COG/Zarr) rather than trusting the record; reports variables, bbox, CRS, categories or time axis that disagree.",
+        "Performs the adversarial pass: licence is the data licence from the provider's terms, contacts are real with licensor and maintainer roles, DOI/citation point at the dataset, description claims are sourced, derived_from versions pinned.",
+        "Returns one severity-ranked table and a verdict (ready to submit / needs changes / cannot verify) and lists everything it could not check as UNVERIFIED.",
+        "Does not edit the YAML."
+      ],
+      "must_not": [
+        "Declare the record correct because validate-yaml.js passed.",
+        "Silently rewrite fields in the record.",
+        "Invent a licence, contact or DOI to replace an unverifiable one."
+      ]
+    },
+    {
+      "name": "review a catalog pull request",
+      "prompt": "Review PR #57 on cdh-catalog — it adds records/esa-worldcover-2021/esa-worldcover-2021.yaml. Is it right?",
+      "expected_behaviour": [
+        "Fetches the record from the PR branch, runs the script, and inspects the WorldCover COGs it references (grid step, dtype, class codes vs categories).",
+        "Checks the DOI against Crossref/DataCite and the CC BY 4.0 claim against the ESA WorldCover terms.",
+        "Flags HIGH findings as blocking review comments with the observed evidence, MED/LOW as suggestions, and states what could not be verified.",
+        "Suggests the fix for each finding but leaves the change to the author."
+      ],
+      "must_not": [
+        "Approve on the basis of CI passing.",
+        "Report 'no issues' for checks that were skipped because a library or host was unavailable."
+      ]
+    },
+    {
+      "name": "offline consistency check",
+      "prompt": "No network here — what can you tell me about this record's internal consistency? (pastes a YAML)",
+      "expected_behaviour": [
+        "Runs the script with --no-remote and reports only the offline checks (ids, dates, contact roles, author objects, exclusive temporal fields, placeholders, asset names).",
+        "Lists every network-dependent check as UNVERIFIED rather than passed."
+      ],
+      "must_not": [
+        "Claim URLs, DOI, licence or asset contents were verified."
+      ]
+    }
+  ]
+}

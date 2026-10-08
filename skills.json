@@ -8,6 +8,7 @@
     "sciplot-skill": "/.agents/skills/sciplot-skill/SKILL.md",
     "climate-dashboard": "/.agents/skills/climate-dashboard/SKILL.md",
     "spatial-crop-modeler": "/.agents/skills/spatial-crop-modeler/SKILL.md",
-    "cdh-metadata": "/.agents/skills/cdh-metadata/SKILL.md"
+    "cdh-metadata": "/.agents/skills/cdh-metadata/SKILL.md",
+    "cdh-metadata-verify": "/.agents/skills/cdh-metadata-verify/SKILL.md"
   }
 }
