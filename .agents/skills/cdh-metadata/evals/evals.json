@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "I need to create CDH metadata for my forest cover map. The file is at D:/data/examples/MapaForestal_2024.tif — it's a classified raster showing forest types in Honduras for the year 2024, produced by ICF (Instituto Nacional de Conservacion y Desarrollo Forestal). License is CC-BY-4.0. No DOI yet. It will be hosted at https://digital-atlas.s3.amazonaws.com/cdh/data/mapa-forestal-2024/MapaForestal_2024.tif. My contact info: organization = Alliance of Bioversity International and CIAT, my name is Andres Aguilar, email andres.aguilar@cgiar.org. Please generate the CDH YAML metadata file.",
-      "expected_output": "A valid CDH YAML file written to disk named mapa-forestal-2024.yaml (or similar id). Must include: cdh_schema_version v0.3.0, id in lowercase-kebab-case, title and description for a Honduras forest map, license CC-BY-4.0, resource_type dataset, spatial bbox auto-extracted (~[-89.36, 12.98, -83.15, 16.52]) and crs EPSG:4326, spatial resolution auto-extracted (~8.983e-05 degrees), temporal for 2024, contact with licensor role (CIAT/Andres Aguilar), data asset with the provided HTTPS URL, media_type for GeoTIFF, cdh.domain including boundaries or climate or similar, processing with a source step, and created/updated set to today. The assistant must also resolve the supplied HTTPS URL during the link-verification stage; that URL is not published yet and returns 404, so the correct behaviour is to raise it with the author once, accept that the upload is pending, keep the URL in the record unchanged, and report it as not yet resolvable. Silently dropping it or silently keeping it without comment are both failures.",
+      "expected_output": "A valid CDH YAML file written to disk named mapa-forestal-2024.yaml (or similar id). Must include: cdh_schema_version v0.4.1, id in lowercase-kebab-case, title and description for a Honduras forest map, license CC-BY-4.0, resource_type dataset, spatial bbox auto-extracted (~[-89.36, 12.98, -83.15, 16.52]) and crs EPSG:4326, an xy dimension inside structures[] with step ~8.983e-05 and unit degree (spatial.resolution was removed in v0.4.0), temporal for 2024, contact with both a licensor and a maintainer role (CIAT/Andres Aguilar), data asset with the provided HTTPS URL, media_type for GeoTIFF, cdh.domain including boundaries or climate or similar, processing with a source step, version (required by the profile), created/updated set to today, and either a citation or a doi. The assistant must also resolve the supplied HTTPS URL during the link-verification stage; that URL is not published yet and returns 404, so the correct behaviour is to raise it with the author once, accept that the upload is pending, keep the URL in the record unchanged, and report it as not yet resolvable. Silently dropping it or silently keeping it without comment are both failures.",
       "files": [],
       "assertions": [
         {
@@ -34,13 +34,25 @@
         {
           "name": "pending_url_surfaced_not_dropped",
           "description": "The unresolvable data URL was reported to the user and still appears verbatim in the written YAML - it was neither silently removed nor presented as verified"
+        },
+        {
+          "name": "version_present",
+          "description": "Record has a `version` field; the CDH profile requires it"
+        },
+        {
+          "name": "contact_has_maintainer_role",
+          "description": "At least one contact holds the `maintainer` role (renamed from `custodian` in v0.4.0)"
+        },
+        {
+          "name": "no_schema_key",
+          "description": "The record has no `$schema` key; it was removed in v0.4.0"
         }
       ]
     },
     {
       "id": 2,
       "prompt": "Help me document my crop model output for the CDH. The file is D:/data/examples/yield_dedza_bean.nc — it contains DSSAT-simulated bean grain yield (kg/ha) for Dedza district in Malawi, covering years 2000-2002 with 3 planting windows (Nov 15, Nov 29, Dec 13). The data was produced by the Alliance of Bioversity International and CIAT as part of a crop modeling project. License CC-BY-4.0. No DOI. It will be available at https://example.org/cdh/yield-dedza-bean-2000-2002.nc. Contact: Andres Aguilar, andres.aguilar@cgiar.org, organization Alliance of Bioversity International and CIAT. Please create the CDH metadata YAML.",
-      "expected_output": "A valid CDH YAML file written to disk. Must include: cdh_schema_version v0.3.0, id like yield-dedza-bean-2000-2002, title referencing bean yield simulation for Dedza Malawi, description mentioning DSSAT model, temporal start_date 2000 and end_date 2002 with annual or sub-annual resolution, spatial bbox approximately [33.67, -14.63, 34.15, -13.88], variables block with HWAM (grain yield kg/ha) and flag, dimensions block with year and planting_window, cdh.domain agricultural-production, resource_type dataset, contact with licensor, data asset with NC URL, media_type application/netcdf. The example.org data URL does not resolve; the assistant must say so rather than presenting the link as working, and must not invent a substitute URL.",
+      "expected_output": "A valid CDH YAML file written to disk. Must include: cdh_schema_version v0.4.1, id like yield-dedza-bean-2000-2002, title referencing bean yield simulation for Dedza Malawi, description mentioning DSSAT model, temporal start_date 2000 and end_date 2002 with annual or sub-annual resolution, spatial bbox approximately [33.67, -14.63, 34.15, -13.88], a structures[] entry whose variables include HWAM (grain yield kg/ha) and flag, and whose dimensions include year (type temporal) and planting_window; record-level variables/dimensions and the datacube extension were removed in v0.4.0, cdh.domain agricultural-production, resource_type dataset, contact with a licensor and a maintainer, data asset with NC URL, media_type application/x-netcdf. The example.org data URL does not resolve; the assistant must say so rather than presenting the link as working, and must not invent a substitute URL.",
       "files": [],
       "assertions": [
         {
@@ -61,7 +73,7 @@
         },
         {
           "name": "media_type_netcdf",
-          "description": "data[].media_type is 'application/netcdf'"
+          "description": "data[].media_type is 'application/x-netcdf'"
         },
         {
           "name": "domain_is_agricultural",
@@ -70,6 +82,14 @@
         {
           "name": "unresolvable_url_reported",
           "description": "The assistant reported that the data URL could not be resolved and did not substitute a made-up URL"
+        },
+        {
+          "name": "structures_block_present",
+          "description": "Variables and dimensions live inside `structures[]`, not at record level"
+        },
+        {
+          "name": "no_datacube_extension",
+          "description": "`extensions[]` does not list the datacube extension; it was folded into core in v0.4.0"
         }
       ]
     },
@@ -94,18 +114,22 @@
         {
           "name": "s3_url_in_data_locations",
           "description": "The S3 URL provided by the user appears in data[].locations"
+        },
+        {
+          "name": "version_present",
+          "description": "Record has a `version` field; the CDH profile requires it"
         }
       ]
     },
     {
       "id": 4,
       "prompt": "Create CDH metadata for CHIRTS-daily. I don't have the file locally - it's the public Climate Hazards Center dataset. Use https://www.chc.ucsb.edu/data/chirtsdaily as the landing page, and my download mirror is https://data.example-broken-host.invalid/chirts/tmax.zarr. License CC-BY-4.0, contact: Climate Hazards Center, UC Santa Barbara. Fill in the rest from what you know about the dataset.",
-      "expected_output": "A valid CDH YAML record for CHIRTS-daily. Because no file is available, every technical field must come from the user or be proposed and confirmed, not fabricated silently. Critically, the assistant must verify every URL before writing the record: the chc.ucsb.edu landing page resolves (200) and is kept; the .invalid mirror cannot resolve (DNS failure) and must be raised with the user rather than written in as though it worked. Any URL the assistant proposes itself - a series URL, a citation URL, a processing source - must also be resolved, and dropped if it does not. The $schema and extensions[] URLs must resolve before the file is written.",
+      "expected_output": "A valid CDH YAML record for CHIRTS-daily. Because no file is available, every technical field must come from the user or be proposed and confirmed, not fabricated silently. Critically, the assistant must verify every URL before writing the record: the chc.ucsb.edu landing page resolves (200) and is kept; the .invalid mirror cannot resolve (DNS failure) and must be raised with the user rather than written in as though it worked. Any URL the assistant proposes itself - a series URL, a citation URL, a processing source - must also be resolved, and dropped if it does not. The extensions[] URLs must resolve before the file is written; there is no $schema key in v0.4.x, and the datacube and classification extension URLs no longer exist.",
       "files": [],
       "assertions": [
         {
           "name": "all_urls_verified_before_write",
-          "description": "Every URL destined for the record was resolved during the link-verification stage, including $schema and extensions[] URLs"
+          "description": "Every URL destined for the record was resolved during the link-verification stage, including the extensions[] URLs"
         },
         {
           "name": "unresolvable_mirror_raised_with_user",
