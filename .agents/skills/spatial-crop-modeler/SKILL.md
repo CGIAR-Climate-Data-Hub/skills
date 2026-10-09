@@ -132,6 +132,7 @@ Generate the appropriate YAML config file and save it to the output directory.
 
 | Requirement | How to check / fix |
 |-------------|-------------------|
+| **A `.nc` file, not a `.zarr` store** | `ag-cube-cm`'s loader accepts `.nc`, `.tif` and `.pkl` only, and raises `ValueError: Unsupported file extension '.zarr'`. The `climate-data-download` skill now writes Zarr by default — rebuild that cube with `output_format: "both"` (or `"netcdf"`) and point `weather_path` at the `.nc`. To convert one you already have: `from aggeodata.transform.zarr_export import open_cube; open_cube("cube.zarr").to_netcdf("cube.nc")` |
 | Dim names: `time`, `y`, `x` | `list(ds.dims)` — rename if `lat`/`lon` or `latitude`/`longitude` |
 | No `spatial_ref` / `crs` data vars | `ds.drop_vars([v for v in ds.data_vars if v in ("spatial_ref","crs")])` |
 | No `grid_mapping` attribute on vars | `da.attrs.pop("grid_mapping", None)` for each data variable |
@@ -171,6 +172,16 @@ management:
 The `climate:` block reuses the **same nested `variables:` shape** as the
 `climate-data-download` skill (one entry per CF variable, each with a
 `source` and any per-variable knobs like `gee_project` / `gee_dataset_id`).
+
+**Set `use_zarr: true` per variable.** `full_pipeline` downloads are the slow half of a run —
+one file per day for CHIRPS/CHIRTS, one queued CDS request per year for AgERA5. The Zarr
+datacubes turn each into a single indexed read and lift the `ncores: 1` cap. `ag-cube-cm`
+passes `climate.variables` straight through to aggeodata's own `VariableConfig`, so the flag
+works here exactly as it does in `climate-data-download` — but note it must go **per variable**:
+`ag-cube-cm` builds the `general:` block of the generated aggeodata config itself, so a
+`general.use_zarr` set here never reaches the downloader. See that skill's
+*Backend: Zarr datacubes vs per-file endpoints* for when not to use it — continuing a UCSB
+time series, `chirts_source: chirts`, or monthly data.
 If you already have a working climate block from that skill, paste it under
 `climate:` here and you're done — no translation needed. The legacy flat
 `sources: {pr: chirps, ...}` form with a top-level `gee_project:` is still
@@ -195,18 +206,24 @@ climate:
   variables:
     pr:
       source: chirps       # or: agera5, nasa_power, gee
+      use_zarr: true       # read the Zarr datacube instead of one file per day
     tasmax:
       source: chirts       # or: agera5, nasa_power, gee
+      use_zarr: true
     tasmin:
       source: chirts
+      use_zarr: true
     rsds:
       source: agera5       # or: nasa_power (no key, 0.5 deg), gee
+      use_zarr: true       # ECMWF ARCO store — same ~/.cdsapirc key, no CDS queue
     # GEE example — set `source: gee` and the cloud project per variable:
     # pr:
     #   source: gee
     #   gee_project: ee-myproject
     #   gee_dataset_id: UCSB-CHG/CHIRPS/DAILY   # optional; pulls the default if omitted
-  ncores:             2    # GEE requires ncores: 1 — HDF5 writer is not parallel-safe
+  ncores:             4    # 4 when every chirps/chirts variable sets use_zarr: true;
+                           # 1 otherwise (UCSB connection cap), and 1 for GEE always
+                           # — its HDF5 writer is not parallel-safe
   agera5_version:     "2_0"
   reference_variable: pr   # default: finest grid in the plan — see "Reference variable choice" below
 

@@ -47,6 +47,75 @@ When the user selects GEE, all variables route through `source: gee` in the YAML
 
 ---
 
+# BACKEND: ZARR DATACUBES VS PER-FILE ENDPOINTS
+
+Routing decides *which archive*. `use_zarr` decides *how it is read*, and it is the single
+biggest lever on how long a download takes.
+
+The official endpoints hand out **one file per day** for CHIRPS and CHIRTS — throttled to a
+single connection — and **queue one request per year** for AgERA5. A three-year, three-variable
+request is thousands of sequential HTTP round trips or a morning in the CDS queue. The same
+archives are published as consolidated **Zarr datacubes**, where a bounding box plus a date
+range is one indexed read.
+
+| Source | Zarr store | Credentials |
+|--------|-----------|-------------|
+| CHIRPS v3 daily | `aaguilar90/chirps-v3-daily-rnl` (Hugging Face) | none |
+| CHIRTS-ERA5 daily | `aaguilar90/chirts-era5-daily` (Hugging Face) | none |
+| AgERA5 | ECMWF ARCO datastore | the same `~/.cdsapirc` key |
+
+Turn it on in `general`, where it applies to every CHIRPS / CHIRTS / AgERA5 variable in the plan:
+
+```yaml
+general:
+  use_zarr: true
+```
+
+or per variable, which overrides the general default:
+
+```yaml
+climate:
+  variables:
+    pr:
+      source: chirps
+      use_zarr: true
+    tasmax:
+      source: chirts
+      use_zarr: false        # this one stays on the UCSB servers
+    rsds:
+      source: agera5
+      use_zarr: true
+      agera5_chunking: geo   # "geo" (default) | "time"
+```
+
+**The default is `false`** — opt in deliberately, and say so in the plan. Both backends write
+the **same per-day NetCDF layout in the same native units**, so the datacube step is unchanged
+either way.
+
+## When NOT to use it
+
+`use_zarr` is valid only for `chirps`, `chirts`, and `agera5`; setting it on `nasa_power` or
+`gee` raises a validation error. Four more cases where the per-file endpoint is the right answer:
+
+- **`chirts_source: chirts`** (the original CHIRTS-daily v1.0) — the mirror carries CHIRTS-**ERA5**
+  only, and the combination is rejected outright.
+- **Monthly frequency** — the mirrors are daily only; also rejected.
+- **Continuing an existing time series** that was downloaded from UCSB. The two backends serve
+  *different precipitation products*: the mirror is CHIRPS v3 (station-blended), the UCSB v3
+  endpoint in this package is CHIRP v3 (satellite-only, no station blending). Pick one and keep
+  it for the whole series.
+- **Adding days to a folder that already holds per-file downloads.** Server-side clipping can
+  keep one extra edge pixel that the Zarr coordinate slice drops, so the per-day grids differ.
+  The downloader warns when it spots this; don't mix backends inside one variable folder.
+
+Two smaller differences worth stating when you propose it: mirror temperatures are stored
+rounded to **0.1 °C** (the UCSB GeoTIFFs are full float32, max difference 0.05 °C), and the
+AgERA5 ARCO store exposes the 16 variables aggeodata maps today.
+
+`use_huggingface` and `hf_url` are still accepted as aliases for `use_zarr` and `zarr_url`.
+
+---
+
 # MCP TOOLS AVAILABLE
 
 These tools are exposed by the `aggeodata` MCP server:
@@ -76,7 +145,36 @@ Ask these before doing anything else. Accept "I don't know" gracefully and apply
 | Admin level | If sub-country: level 1 (province/region) or level 2 (district)? | 1 |
 | Output folder | Where to save files? **No spaces in path.** | **required** |
 | **Download source** | Use default sources (CHIRPS/CHIRTS/AgERA5/NASA POWER) **or Google Earth Engine (GEE)**? | default |
-| CPU cores | Parallel download workers? | 1 (GEE, CHIRPS, or CHIRTS present) / 4 (AgERA5 only) |
+| **Backend** | Read CHIRPS/CHIRTS/AgERA5 from the fast Zarr datacubes (`use_zarr: true`)? | propose `true` — see below |
+| **What is the cube for?** | Analysis/slicing, or feeding a crop model? | decides `output_format` — see below |
+| CPU cores | Parallel download workers? | derived from the backend — see the ncores rule |
+
+### When to propose `use_zarr: true`
+
+Propose it by default for any CHIRPS / CHIRTS / AgERA5 request and say what it buys: one
+indexed read instead of a file per day or a year in the CDS queue, and `ncores: 4` instead of
+`1`. On a multi-year request the difference is hours.
+
+Do **not** propose it, and say why, when the user is:
+- continuing or extending a time series already downloaded from UCSB (different precipitation
+  product; mixed grids in one folder),
+- asking for the original CHIRTS-daily v1.0 (`chirts_source: chirts`) or monthly data — both
+  rejected by the Zarr backend,
+- requesting only `nasa_power` or `gee` variables, where the option does not apply.
+
+If the user has been rate-limited by `data.chc.ucsb.edu`, `use_zarr: true` is the better answer
+than GEE: same archive, no authentication, no project ID.
+
+### Ask what the cube is for
+
+`use_zarr` and `output_format` are different decisions that happen to share a word. The first is
+how the data is **downloaded**; the second is how the stacked cube is **written**, and it is the
+one that can break the next tool in the chain.
+
+This skill writes a Zarr v3 store by default. **`ag-cube-cm` cannot read one** — so if the answer
+to "what will you do with it?" involves DSSAT, crop modelling, or the `spatial-crop-modeler`
+skill, set `output_format: "both"` and say why. When the user has no particular destination in
+mind, `both` is the forgiving choice. See *Datacube output format* in the technical notes.
 
 Alternatively, accept a **bounding box** `[xmin, ymin, xmax, ymax]` in EPSG:4326 instead of a country/region — pass it as the `bbox` parameter.
 
@@ -116,8 +214,11 @@ Before calling any tool, display the mapping using an ASCII box table and ask fo
 └─────────────────┴─────────────┴───────────────────────────────────────────────┘
 
 Country: Ghana | Period: 2020-01-01 → 2022-12-31 | Output: D:/data/ghana_climate
+Download: Zarr datacubes (use_zarr: true) | ncores: 4
+Cube:     Zarr v3 store, zstd codec (open with open_cube; not readable by ag-cube-cm)
 
-Note: AgERA5 is in the plan — do you have ~/.cdsapirc configured?
+Note: AgERA5 is in the plan — do you have ~/.cdsapirc configured? The same key
+authenticates the ARCO Zarr store, so nothing extra is needed.
 Shall I proceed, or would you like to change any source?
 ```
 
@@ -161,14 +262,22 @@ Direct API calls bypass the rate-limit safeguards and have caused CrowdSec bans 
 
 ### ncores rule (critical)
 
-| Sources in plan | ncores to set | Reason |
-|-----------------|--------------|--------|
-| CHIRPS or CHIRTS present | **1** | CrowdSec bans >1 worker on data.chc.ucsb.edu |
-| AgERA5 only | 4 | CDS API handles parallel requests |
-| NASA POWER only | 1 | S3 Zarr backend; ncores ignored |
-| GEE (any variable) | **1** | GEE writes per-day GeoTIFFs through HDF5 without parallel I/O — `ncores > 1` crashes downstream models (e.g. ag-cube-cm) |
+**`ncores` depends on the backend, not only on the source.** The cap on CHIRPS and CHIRTS
+exists because `data.chc.ucsb.edu` bans more than one connection — a rule about *that server*.
+With `use_zarr: true` no request reaches it, so the cap does not apply and parallel workers
+fetch concurrent time-batches instead.
 
-When mixing CHIRPS/CHIRTS or GEE with anything else, always set `ncores: 1`.
+| Sources in plan | `use_zarr` | ncores | Reason |
+|-----------------|-----------|--------|--------|
+| CHIRPS or CHIRTS present | `false` | **1** | CrowdSec bans >1 worker on data.chc.ucsb.edu |
+| CHIRPS or CHIRTS present | `true` | 4 | Hugging Face Zarr store; workers read concurrent time-batches |
+| AgERA5 only | either | 4 | CDS queues in parallel; the ARCO store reads in parallel |
+| NASA POWER only | n/a | 1 | S3 Zarr backend; ncores ignored |
+| GEE (any variable) | n/a | **1** | GEE writes per-day GeoTIFFs through HDF5 without parallel I/O — `ncores > 1` crashes downstream models (e.g. ag-cube-cm) |
+
+When mixing GEE with anything else, always set `ncores: 1`. When mixing CHIRPS/CHIRTS with
+anything else, set `ncores: 1` **unless every CHIRPS/CHIRTS variable in the plan reads from
+Zarr** — one per-file variable in the plan reinstates the cap for the whole run.
 
 ### Install (run once)
 
@@ -222,10 +331,23 @@ soil:
   enabled: false
 
 general:
-  suffix:         "{SUFFIX}"   # short label, no spaces
-  ncores:         1            # always 1 when chirps or chirts is present
-  task:           "download"
-  agera5_version: "2_0"
+  suffix:              "{SUFFIX}"   # short label, no spaces
+  use_zarr:            true         # Zarr datacubes for chirps/chirts/agera5 — far faster.
+                                    # false = official per-file endpoints. Default: false.
+  ncores:              4            # 4 with use_zarr: true; 1 when any chirps/chirts
+                                    # variable still reads from UCSB, or when GEE is present
+  task:                "download"
+  reference_variable:  "pr"
+  agera5_version:      "2_0"
+  nasa_power_backend:  "s3"         # "s3" (Zarr, default, fast) | "rest" (tile API)
+  # Datacube output. Package defaults are "netcdf" + "blosc"; this skill defaults to
+  # a Zarr v3 store with the zstd codec, because that is the combination GDAL, QGIS
+  # and R terra can actually open. See "Datacube output format" below before changing
+  # it — a cube destined for ag-cube-cm must be netcdf.
+  output_format:       "zarr"       # "zarr" | "netcdf" | "both"
+  zarr_codec:          "zstd"       # "zstd" (readable outside Python) | "blosc" (smaller)
+  zarr_quantize:       true         # scaled integers; false = exact float32
+  zarr_sharded:        false        # keep false — GDAL cannot read sharded stores
 
 paths:
   output_path: "{OUTPUT}"
@@ -355,7 +477,8 @@ Only continue to datacube creation once the user confirms. If confirmed, invoke 
 ```bash
 # From the aggeodata project root:
 pip install -e ".[download,mcp]"
-# [download] adds: cdsapi (AgERA5), s3fs + zarr (NASA POWER S3)
+# [download] adds: cdsapi (AgERA5), s3fs + zarr (NASA POWER S3, and the
+#            CHIRPS/CHIRTS/AgERA5 Zarr datacubes behind use_zarr)
 # [mcp]      adds: mcp[cli] for the MCP server
 
 # Or install directly from GitHub:
@@ -392,8 +515,54 @@ Paths **must not contain spaces**. Spaces corrupt rasterio's HTTP range requests
 
 # TECHNICAL NOTES
 
+## Datacube output format
+
+`run_datacube` writes the stacked cube as a **Zarr v3 store** by default in this skill
+(`output_format: "zarr"`), laid out like the published GeoSPOptimizer archives — same chunk
+geometry, codec and integer quantisation — so a cube built here matches the CHIRPS / CHIRTS /
+AgERA5 datacubes and can be sliced without reading the whole thing.
+
+| Option | This skill | Package default | Why |
+|--------|-----------|-----------------|-----|
+| `output_format` | `zarr` | `netcdf` | chunked, sliceable, matches the published archives |
+| `zarr_codec` | `zstd` | `blosc` | `blosc` gives *"blosc compressor not available"* in GDAL/QGIS/R `terra`; `zstd` opens fine |
+| `zarr_quantize` | `true` | `true` | scaled integers, roughly half the payload, quanta far finer than the products' own uncertainty |
+| `zarr_sharded` | `false` | `false` | GDAL rejects `sharding_indexed` |
+
+**What `run_datacube` returns changes with the format.** `zarr` returns the `.zarr` **directory**
+path; `netcdf` and `both` return the `.nc` file path. Code that assumes a file will mis-handle a
+store.
+
+**Reading it back** — a Zarr store is not a NetCDF file, so `xr.open_dataset(path)` does not work:
+
+```python
+from aggeodata.transform.zarr_export import open_cube
+ds = open_cube("climate_hnd_2020_2020.zarr")   # float32, spatial_ref promoted, ds.rio.crs resolves
+```
+
+`open_cube` uses `xr.open_zarr(consolidated=True, decode_coords="all")` and casts back to float32 —
+the CF decoder would otherwise promote the quantised variables to float64 and double the payload.
+
+### When to use `netcdf` or `both` instead
+
+**`ag-cube-cm` cannot open a Zarr store.** Its loader accepts `.nc`, `.tif` and `.pkl` only, and
+raises `ValueError: Unsupported file extension '.zarr'`. So whenever the cube is headed for
+`spatial-crop-modeler`'s `with_cubes` mode, or for DSSAT by any other route, set:
+
+```yaml
+general:
+  output_format: "both"    # or "netcdf"
+```
+
+`both` writes the store *and* the `.nc`, and returns the `.nc` path — the safe choice when you do
+not know where the cube will end up. Ask the user what the cube is for before accepting the Zarr
+default; "I want to run a crop model with it" is the answer that changes it.
+
+Other reasons to choose `netcdf`: a downstream tool that only reads NetCDF, or a single small cube
+a colleague will open by double-clicking.
+
 ## CHIRPS / CHIRTS rate limit
-Workers are hard-capped at **1** to avoid HTTP 403 from `data.chc.ucsb.edu`. If the user has recently been rate-limited / banned (403 on all requests), advise either waiting 24–48 hours **or switching to `source: gee`** — GEE serves the same CHIRPS and CHIRTS data with no connection limits.
+Applies to the **per-file backend only**. Workers are hard-capped at **1** to avoid HTTP 403 from `data.chc.ucsb.edu`. If the user has been rate-limited or banned (403 on all requests), the first answer is **`use_zarr: true`** — the Hugging Face mirrors are a different host entirely, need no authentication, and lift the worker cap. `source: gee` remains an alternative but costs an authenticated account and a project ID. Waiting 24–48 hours is the last resort, not the first suggestion.
 
 ## Google Earth Engine (GEE)
 
@@ -425,11 +594,13 @@ import ee; ee.Initialize(); print(ee.String("GEE OK").getInfo())
 | Precipitation | `PRECTOTCORR` |
 
 ## AgERA5 downloads by year
-The CDS API queues one request per year. Multi-year ranges run in parallel (`ncores` controls this). Each year may take 5–30 minutes depending on CDS queue load. Use `ncores=2` on shared machines. Already-downloaded years are skipped automatically.
+**Per-file backend only** — with `use_zarr: true` the ARCO store is read directly and there is no queue at all. Otherwise: the CDS API queues one request per year. Multi-year ranges run in parallel (`ncores` controls this). Each year may take 5–30 minutes depending on CDS queue load. Use `ncores=2` on shared machines. Already-downloaded years are skipped automatically.
 
 ## CHIRTS-ERA5 vs original CHIRTS
 - `chirts_source="era5"` (default) — CHIRTS-ERA5 experimental reanalysis. Coverage: **1983–present**.
 - `chirts_source="chirts"` — original CHIRTS-daily v1.0. Coverage: **1983–2016** only.
+  Not available from the Zarr mirror: `chirts_source: chirts` with `use_zarr: true` is
+  rejected. Use the per-file backend for it.
 
 ## Sub-country downloads
 Always confirm admin unit spelling with `list_admin_units` before passing `feature_name`. Clips reduce file sizes by 10–100× vs full country.
