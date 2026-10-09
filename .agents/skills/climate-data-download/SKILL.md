@@ -146,7 +146,6 @@ Ask these before doing anything else. Accept "I don't know" gracefully and apply
 | Output folder | Where to save files? **No spaces in path.** | **required** |
 | **Download source** | Use default sources (CHIRPS/CHIRTS/AgERA5/NASA POWER) **or Google Earth Engine (GEE)**? | default |
 | **Backend** | Read CHIRPS/CHIRTS/AgERA5 from the fast Zarr datacubes (`use_zarr: true`)? | propose `true` — see below |
-| **What is the cube for?** | Analysis/slicing, or feeding a crop model? | decides `output_format` — see below |
 | CPU cores | Parallel download workers? | derived from the backend — see the ncores rule |
 
 ### When to propose `use_zarr: true`
@@ -165,16 +164,12 @@ Do **not** propose it, and say why, when the user is:
 If the user has been rate-limited by `data.chc.ucsb.edu`, `use_zarr: true` is the better answer
 than GEE: same archive, no authentication, no project ID.
 
-### Ask what the cube is for
+### `use_zarr` is not `output_format`
 
-`use_zarr` and `output_format` are different decisions that happen to share a word. The first is
-how the data is **downloaded**; the second is how the stacked cube is **written**, and it is the
-one that can break the next tool in the chain.
-
-This skill writes a Zarr v3 store by default. **`ag-cube-cm` cannot read one** — so if the answer
-to "what will you do with it?" involves DSSAT, crop modelling, or the `spatial-crop-modeler`
-skill, set `output_format: "both"` and say why. When the user has no particular destination in
-mind, `both` is the forgiving choice. See *Datacube output format* in the technical notes.
+Two settings share a word and mean different things. **`use_zarr`** is how the data is
+*downloaded*; **`output_format`** is how the stacked cube is *written*. Both default to Zarr here.
+Don't interrogate the user about either — propose them, and switch `output_format` only when they
+say they need a NetCDF file. See *Datacube output format* in the technical notes.
 
 Alternatively, accept a **bounding box** `[xmin, ymin, xmax, ymax]` in EPSG:4326 instead of a country/region — pass it as the `bbox` parameter.
 
@@ -215,7 +210,7 @@ Before calling any tool, display the mapping using an ASCII box table and ask fo
 
 Country: Ghana | Period: 2020-01-01 → 2022-12-31 | Output: D:/data/ghana_climate
 Download: Zarr datacubes (use_zarr: true) | ncores: 4
-Cube:     Zarr v3 store, zstd codec (open with open_cube; not readable by ag-cube-cm)
+Cube:     Zarr v3 store, zstd codec (open with open_cube)
 
 Note: AgERA5 is in the plan — do you have ~/.cdsapirc configured? The same key
 authenticates the ARCO Zarr store, so nothing extra is needed.
@@ -342,8 +337,8 @@ general:
   nasa_power_backend:  "s3"         # "s3" (Zarr, default, fast) | "rest" (tile API)
   # Datacube output. Package defaults are "netcdf" + "blosc"; this skill defaults to
   # a Zarr v3 store with the zstd codec, because that is the combination GDAL, QGIS
-  # and R terra can actually open. See "Datacube output format" below before changing
-  # it — a cube destined for ag-cube-cm must be netcdf.
+  # and R terra can actually open. Use "netcdf" or "both" when the user needs a .nc —
+  # see "Datacube output format" below.
   output_format:       "zarr"       # "zarr" | "netcdf" | "both"
   zarr_codec:          "zstd"       # "zstd" (readable outside Python) | "blosc" (smaller)
   zarr_quantize:       true         # scaled integers; false = exact float32
@@ -545,21 +540,22 @@ the CF decoder would otherwise promote the quantised variables to float64 and do
 
 ### When to use `netcdf` or `both` instead
 
-**`ag-cube-cm` cannot open a Zarr store.** Its loader accepts `.nc`, `.tif` and `.pkl` only, and
-raises `ValueError: Unsupported file extension '.zarr'`. So whenever the cube is headed for
-`spatial-crop-modeler`'s `with_cubes` mode, or for DSSAT by any other route, set:
+Zarr is the default and needs no justification. Switch only when the user asks for a NetCDF file,
+or says their next tool needs one — plenty of software reads `.nc` and cannot open a store:
 
 ```yaml
 general:
   output_format: "both"    # or "netcdf"
 ```
 
-`both` writes the store *and* the `.nc`, and returns the `.nc` path — the safe choice when you do
-not know where the cube will end up. Ask the user what the cube is for before accepting the Zarr
-default; "I want to run a crop model with it" is the answer that changes it.
+`both` writes the store *and* the `.nc`, and returns the `.nc` path.
 
-Other reasons to choose `netcdf`: a downstream tool that only reads NetCDF, or a single small cube
-a colleague will open by double-clicking.
+A cube that already exists converts in one line, so a wrong choice here is cheap to undo:
+
+```python
+from aggeodata.transform.zarr_export import open_cube
+open_cube("climate_hnd_2020_2020.zarr").to_netcdf("climate_hnd_2020_2020.nc")
+```
 
 ## CHIRPS / CHIRTS rate limit
 Applies to the **per-file backend only**. Workers are hard-capped at **1** to avoid HTTP 403 from `data.chc.ucsb.edu`. If the user has been rate-limited or banned (403 on all requests), the first answer is **`use_zarr: true`** — the Hugging Face mirrors are a different host entirely, need no authentication, and lift the worker cap. `source: gee` remains an alternative but costs an authenticated account and a project ID. Waiting 24–48 hours is the last resort, not the first suggestion.
