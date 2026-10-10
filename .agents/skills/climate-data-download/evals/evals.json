@@ -1,0 +1,125 @@
+{
+  "skill_name": "climate-data-download",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I need daily rainfall and max/min temperature for Honduras for 2020 and 2021. Save it to D:/data/hnd_climate. I don't have any API keys set up.",
+      "expected_output": "The skill routes pr to CHIRPS and tasmax/tasmin to CHIRTS, resolves Honduras to a bbox, shows a routing plan, and on confirmation writes a lowercase-key aggeodata YAML and calls run_download. The config must set general.use_zarr: true (the Zarr archives need no credentials and are far faster than one file per day), download_format: zarr, output_format: zarr with zarr_codec: zstd, and ncores: 4 — the one-worker cap belongs to data.chc.ucsb.edu, and with use_zarr nothing reaches it. No AgERA5 variable should appear in the plan, because the user said they have no keys and AgERA5 is the only source that needs one.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "routes_pr_to_chirps_and_temp_to_chirts",
+          "description": "climate.variables has pr: {source: chirps} and tasmax/tasmin: {source: chirts}"
+        },
+        {
+          "name": "zarr_backend_enabled",
+          "description": "general.use_zarr is true, and each chirps/chirts variable either inherits it or sets use_zarr: true"
+        },
+        {
+          "name": "yearly_zarr_download_layout",
+          "description": "general.download_format is \"zarr\", so each year lands as one store per variable rather than one file per day"
+        },
+        {
+          "name": "zarr_cube_output_with_zstd",
+          "description": "general.output_format is \"zarr\" and general.zarr_codec is \"zstd\" — blosc cannot be read by GDAL/QGIS"
+        },
+        {
+          "name": "ncores_is_four_not_one",
+          "description": "general.ncores is 4. Setting 1 means the skill applied the UCSB connection cap to a plan that never touches UCSB"
+        },
+        {
+          "name": "no_agera5_without_a_key",
+          "description": "No variable is routed to agera5, since the user stated they have no API keys"
+        },
+        {
+          "name": "config_uses_lowercase_section_keys",
+          "description": "The YAML uses dates / spatial_info / climate / soil / general / paths, not the legacy UPPERCASE aliases"
+        },
+        {
+          "name": "plan_shown_before_downloading",
+          "description": "A routing plan naming the variables, sources, period and bbox is shown and confirmed before run_download is called"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "can you get me precipitation + solar radiation for just the Yoro department in Honduras, 2019-2021? no CDS account here. output to /data/yoro",
+      "expected_output": "The skill confirms the admin unit spelling with list_admin_units before resolving Yoro to a bbox, rather than guessing a name the boundary file may not use. pr routes to CHIRPS; rsds routes to NASA POWER rather than AgERA5, because the user has no CDS key, and the skill says so and notes NASA POWER is 0.5 degree so radiation is near-uniform over a department. The config sets use_zarr: true for pr only — setting it on a nasa_power variable is a validation error, not a no-op — and general.nasa_power_backend: s3.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "admin_unit_spelling_confirmed",
+          "description": "list_admin_units (or the equivalent) is consulted for Honduras before a feature name is passed to the extent resolver"
+        },
+        {
+          "name": "rsds_falls_back_to_nasa_power",
+          "description": "rsds is routed to nasa_power, not agera5, and the substitution is explained to the user"
+        },
+        {
+          "name": "use_zarr_not_set_on_nasa_power",
+          "description": "The nasa_power variable carries no use_zarr key — the schema rejects it for sources without a Zarr archive"
+        },
+        {
+          "name": "resolution_tradeoff_stated",
+          "description": "The reply notes NASA POWER's 0.5 degree cell is coarse relative to a single department"
+        },
+        {
+          "name": "sub_country_extent_used",
+          "description": "The extent is the Yoro bbox, not the whole of Honduras"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I already pulled CHIRPS for Malawi from the UCSB servers last year and the files are in /data/mwi/pr_raw. I want to extend that series through 2023 — same variable, same area.",
+      "expected_output": "This is the case where the Zarr default is wrong and the skill must say so. The mirror serves CHIRPS v3 (station-blended) while the package's UCSB endpoint serves CHIRP v3 (satellite-only) — different products — and server-side clipping can leave an edge pixel the Zarr slice drops, so the per-day grids differ. The skill should set use_zarr: false for this run, set ncores: 1 because the request now goes to data.chc.ucsb.edu, explain both reasons, and not silently extend the series with a different product.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "use_zarr_disabled_for_continuation",
+          "description": "use_zarr is false for the chirps variable rather than inheriting the skill's default"
+        },
+        {
+          "name": "product_difference_explained",
+          "description": "The reply states that the mirror and the UCSB endpoint serve different precipitation products, so mixing them within one series is not safe"
+        },
+        {
+          "name": "ncores_returns_to_one",
+          "description": "general.ncores is 1, because the per-file backend reinstates the UCSB connection cap"
+        },
+        {
+          "name": "does_not_silently_use_the_default",
+          "description": "The skill does not simply apply use_zarr: true and proceed without raising the mismatch"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "download pr, tasmax, tasmin and rsds for bbox [-87.8, 14.0, -86.8, 15.0] for 2021, I'll be feeding the result into a crop model so I need a netcdf",
+      "expected_output": "The bbox is passed straight through without geocoding. The user named a NetCDF requirement, so output_format becomes \"both\" (or \"netcdf\") and the skill says why — the default Zarr store is not what they asked for. Everything else keeps the defaults: use_zarr: true, download_format: zarr, ncores: 4. The skill should not interrogate the user about what the cube is for, and should not need to name any particular downstream tool; the user already stated the requirement.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "bbox_passed_through_unchanged",
+          "description": "spatial_info.extent is the supplied bbox; no country or admin lookup is performed"
+        },
+        {
+          "name": "netcdf_requirement_honoured",
+          "description": "general.output_format is \"both\" or \"netcdf\", not the \"zarr\" default"
+        },
+        {
+          "name": "download_layout_still_zarr",
+          "description": "general.download_format stays \"zarr\" — the NetCDF request is about the stacked cube, not the files on disk"
+        },
+        {
+          "name": "fetch_backend_still_zarr",
+          "description": "general.use_zarr stays true — the NetCDF request says nothing about how the data is fetched"
+        },
+        {
+          "name": "no_unnecessary_questioning",
+          "description": "The skill acts on the stated requirement rather than asking the user what the cube is for"
+        }
+      ]
+    }
+  ]
+}

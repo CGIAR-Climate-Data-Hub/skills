@@ -164,12 +164,19 @@ Do **not** propose it, and say why, when the user is:
 If the user has been rate-limited by `data.chc.ucsb.edu`, `use_zarr: true` is the better answer
 than GEE: same archive, no authentication, no project ID.
 
-### `use_zarr` is not `output_format`
+### Three settings share the word "zarr"
 
-Two settings share a word and mean different things. **`use_zarr`** is how the data is
-*downloaded*; **`output_format`** is how the stacked cube is *written*. Both default to Zarr here.
-Don't interrogate the user about either — propose them, and switch `output_format` only when they
-say they need a NetCDF file. See *Datacube output format* in the technical notes.
+They act at three different stages. All three default to Zarr in this skill; propose them, state
+them in the plan, and don't interrogate the user about any of them.
+
+| Setting | Stage | What it decides |
+|---------|-------|-----------------|
+| `use_zarr` | **fetching** | read the analysis-ready Zarr archives instead of the per-day endpoints (chirps / chirts / agera5 only) |
+| `download_format` | **on disk** | `zarr` = one store per variable per year; `netcdf` = one file per day |
+| `output_format` | **the stacked cube** | `zarr` = a Zarr v3 store; `netcdf` = one `.nc`; `both` = each |
+
+Only `output_format` needs changing when the user says they want a NetCDF file. See *Download
+layout* and *Datacube output format* in the technical notes.
 
 Alternatively, accept a **bounding box** `[xmin, ymin, xmax, ymax]` in EPSG:4326 instead of a country/region — pass it as the `bbox` parameter.
 
@@ -210,6 +217,7 @@ Before calling any tool, display the mapping using an ASCII box table and ask fo
 
 Country: Ghana | Period: 2020-01-01 → 2022-12-31 | Output: D:/data/ghana_climate
 Download: Zarr datacubes (use_zarr: true) | ncores: 4
+Download: yearly Zarr stores on disk (download_format: zarr)
 Cube:     Zarr v3 store, zstd codec (open with open_cube)
 
 Note: AgERA5 is in the plan — do you have ~/.cdsapirc configured? The same key
@@ -335,6 +343,10 @@ general:
   reference_variable:  "pr"
   agera5_version:      "2_0"
   nasa_power_backend:  "s3"         # "s3" (Zarr, default, fast) | "rest" (tile API)
+  # What the download step leaves on disk. "netcdf" writes one file per day, which
+  # is tens of thousands of files for a multi-year request; "zarr" collapses each
+  # year into one store per variable. See "Download layout" below.
+  download_format:     "zarr"       # "zarr" (one cube per year) | "netcdf" (daily files)
   # Datacube output. Package defaults are "netcdf" + "blosc"; this skill defaults to
   # a Zarr v3 store with the zstd codec, because that is the combination GDAL, QGIS
   # and R terra can actually open. Use "netcdf" or "both" when the user needs a .nc —
@@ -509,6 +521,40 @@ Paths **must not contain spaces**. Spaces corrupt rasterio's HTTP range requests
 ---
 
 # TECHNICAL NOTES
+
+## Download layout
+
+`download_format: "zarr"` collapses each year of each variable into one store instead of leaving
+one NetCDF per day — a three-year, four-variable request goes from ~4,400 files to 12 stores:
+
+```
+data/raw/pr_hnd_2020_raw/
+    chirps_hnd_2020_pr_2020.zarr/
+    chirps_hnd_2020_pr_2021.zarr/
+```
+
+The name is `{source}_{aoi}_{cf_var}_{year}.zarr`, where **`aoi` is the stem of the config file**.
+So name the config after the area — `hnd_2020.yaml`, not `aggeodata_hnd_2020.yaml` — or the stem
+shows up in every store name.
+
+What this changes in practice:
+
+- **The daily files are deleted**, but only after the year's store is written *and* reopened with
+  the expected day count. The store is built at a `.tmp` path and swapped in, so an interrupted
+  run cannot replace a good store with a half-written one, and a failed write leaves the dailies
+  intact.
+- **Re-running is cheap and safe.** Because the dailies are gone, the downloaders' own
+  "already on disk?" check would miss and re-fetch everything; instead the pipeline narrows each
+  request to the span the existing stores do not cover. An unchanged config is a no-op. Extending
+  the date range fetches only the new days and merges them into the year.
+- **NASA POWER is skipped** — it already writes one multi-day NetCDF, so there is nothing to
+  consolidate. A plan mixing CHIRPS and NASA POWER ends up with stores for one and a NetCDF for
+  the other, which is expected.
+- **`run_datacube` reads either layout**, and prefers the yearly stores when both are present, so
+  an existing download folder keeps working and can be migrated without a rebuild.
+
+Use `download_format: "netcdf"` when the user specifically wants the per-day files — to feed a
+tool that globs them, or to inspect a single day.
 
 ## Datacube output format
 
