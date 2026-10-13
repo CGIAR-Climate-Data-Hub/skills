@@ -138,11 +138,12 @@ converted. What still matters:
 
 | Requirement | How to check / fix |
 |-------------|-------------------|
-| `.nc` **or** `.zarr` (also `.tif`, `.pkl`) | Both are read natively. A Zarr store is opened with `decode_coords="all"` so `spatial_ref` becomes a coordinate and `ds.rio.crs` resolves, and scaled integers are CF-decoded and cast back to float32. Anything else raises `Unsupported file extension`. |
+| `.zarr` — the standard | Build cubes with `output_format: "zarr"`. A Zarr store is opened with `decode_coords="all"` so `spatial_ref` becomes a coordinate and `ds.rio.crs` resolves, and scaled integers are CF-decoded and cast back to float32. `.nc`, `.tif` and `.pkl` are still read for older cubes, but new work should be Zarr; anything else raises `Unsupported file extension`. |
+| **Weather variable names** | `pr`, `tasmax`, `tasmin`, `rsds` — the CF names aggeodata writes. **Do not rename them.** `models/dssat/base.py` maps them to its own internal names on read: *"Accept CF variable names produced by aggeodata … without a manual renaming step"*. The internal spellings (`precipitation`, `tmax`, `tmin`, `solar_radiation`) are accepted too, so a check demanding those will reject every valid aggeodata cube. Units are handled the same way: Kelvin → °C and J/m²/day → MJ/m²/day, both automatic. |
 | Coordinates in **degrees** | `ag-cube-cm` stamps `EPSG:4326` on the cube rather than reprojecting, so a cube in projected metres silently reports latitude 1670931 to DSSAT. This is the one that still bites. |
 | Axis names | `time` or `date` both work, and `lat`/`lon`/`latitude`/`longitude` are renamed to `y`/`x` automatically. A cube written by aggeodata's Zarr exporter arrives as `time`/`lat`/`lon` and needs no edit. |
 | CF datetime time coord | `ds.time.dtype.kind == "M"` — if integer zeros, see stacker fix in `troubleshooting.md` |
-| Soil and weather on the same grid | The valid-pixel mask ANDs the two cubes, so coordinates that differ give zero pixels. |
+| Soil and weather on the **same grid** | The valid-pixel mask ANDs the two cubes, so coordinates that differ anywhere give **zero** pixels — a run that looks like it worked and produced nothing. SoilGrids at 250 m against CHIRPS at 5 km is the normal case, not user error: resample the soil cube onto the climate grid (see below). Keep the climate grid — upsampling weather would invent daily series nobody measured, while averaging soil within a climate cell is an honest summary of it. |
 
 A `spatial_ref` coordinate and `grid_mapping` attributes are fine now — the loader clears a stale
 pointer before writing the CRS. They only needed stripping in earlier releases.
@@ -471,15 +472,33 @@ assert float(soil.x.min()) <= float(weather.x.max()), "Soil/weather X extents do
 #    SoilGrids (~0.002°) is ~25× finer than CHIRPS (0.05°) and may carry a
 #    different CRS. reproject_match fixes both in one step — it reprojects to
 #    the climate CRS and resamples to the climate resolution.
+from rasterio.enums import Resampling
+
 soil_res    = abs(float(soil.rio.resolution()[0]))
 weather_res = abs(float(weather.rio.resolution()[0]))
 if abs(soil_res - weather_res) > weather_res * 0.1:
     print(f"Soil res ({soil_res:.5f}°) differs from climate res ({weather_res:.5f}°) — reproject_match required.")
-    soil = soil.rio.write_crs("EPSG:4326")
-    soil = soil.rio.reproject_match(weather, resampling="bilinear")
-    soil.to_netcdf("soil_<country>_resampled.nc")
-    print("Saved soil_<country>_resampled.nc — update soil_path in your config.")
+    # Reference = ONE timestep of ONE weather variable. Matching against the whole
+    # cube drags the time axis into the warp for no benefit.
+    ref = weather.isel(time=0)[[next(v for v in weather.data_vars if v != "spatial_ref")]]
+    ref  = ref.rio.set_spatial_dims(x_dim="x", y_dim="y").rio.write_crs("EPSG:4326")
+    soil = soil.rio.set_spatial_dims(x_dim="x", y_dim="y").rio.write_crs("EPSG:4326")
+    # Resampling.average, NOT nearest or bilinear: going 250 m -> 5 km, nearest keeps
+    # one source pixel per cell and discards the other ~400, so a cell's clay content
+    # becomes whichever point landed on the centre. average uses all of them.
+    soil = soil.rio.reproject_match(ref, resampling=Resampling.average).load()
+    # The source store's chunk encoding rides along and no longer describes this
+    # array; zarr refuses the write rather than risk corrupting it.
+    soil = soil.chunk({"depth": 1})
+    for v in soil.variables:
+        soil[v].encoding = {}
+    soil.to_zarr("soil_<country>_on_weather_grid.zarr", mode="w", consolidated=True)
+    print("Saved soil_<country>_on_weather_grid.zarr — update soil_path in your config.")
 ```
+
+Verify afterwards that the axes match **exactly** — `np.array_equal(soil.y.values, weather.y.values)`
+and the same for `x`. Close is not good enough: the mask ANDs the two, so a half-pixel offset
+still yields zero simulatable pixels.
 
 If the extent assertion fails, rebuild the soil cube on the climate extent.
 If the resolution block runs, point `soil_path` at the resampled file before running the simulation.
