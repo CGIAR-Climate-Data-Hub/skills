@@ -499,17 +499,45 @@ pip install -e ".[mcp]"
 
 ## CDS API key — required only if AgERA5 is in the plan
 
-Register free at https://cds.climate.copernicus.eu/ then create `%USERPROFILE%\.cdsapirc` (Windows) or `~/.cdsapirc` (Linux/Mac):
+AgERA5 is the only source needing credentials, and it needs them for both backends — the CDS
+queue *and* the ARCO Zarr store read the same `~/.cdsapirc`. Everything else (CHIRPS, CHIRTS,
+NASA POWER, SoilGrids) is open. Four steps:
+
+**1. Register** — free account at https://cds.climate.copernicus.eu/ , then confirm the email.
+
+**2. Accept the dataset licence.** Open
+https://cds.climate.copernicus.eu/datasets/sis-agrometeorological-indicators?tab=overview ,
+switch to the **Download** tab, scroll to *Terms of use*, and accept. **This is the step people
+skip**, and it fails in a way that looks like a broken key: the request is accepted and then
+returns `403 required licences not accepted`. A valid key is not enough on its own — the licence
+is per-dataset and tied to your account.
+
+**3. Copy your Personal Access Token** from https://cds.climate.copernicus.eu/profile (also shown
+on https://cds.climate.copernicus.eu/how-to-api). It is a single UUID-style token.
+
+**4. Write the config** to `~/.cdsapirc` (Linux/macOS) or `%USERPROFILE%\.cdsapirc` (Windows):
 
 ```
 url: https://cds.climate.copernicus.eu/api
-key: <YOUR-UID>:<YOUR-API-KEY>
+key: 12345678-abcd-1234-abcd-1234567890ab
 ```
+
+Two formats are circulating and only the first works. The old `url: …/api/v2` with
+`key: <UID>:<API-KEY>` is from the CDS that was retired in 2024; that endpoint now returns 404,
+so a config carrying a colon in the key is the second thing to check after the licence.
 
 Quick check:
 ```python
-import cdsapi; cdsapi.Client()   # should print "Welcome to the CDS"
+import cdsapi
+cdsapi.Client()            # raises if the file is missing or incomplete — it has no defaults
 ```
+
+| Symptom | Cause |
+|---------|-------|
+| `Missing/incomplete configuration file` | no `~/.cdsapirc`, or it lacks `url` or `key` |
+| `403 required licences not accepted` | step 2 was skipped for this dataset |
+| `404` on every request | the config still points at `/api/v2` |
+| Works for CDS but not the ARCO store | none — the same key serves both; suspect the licence |
 
 ## Output folder — no spaces
 
