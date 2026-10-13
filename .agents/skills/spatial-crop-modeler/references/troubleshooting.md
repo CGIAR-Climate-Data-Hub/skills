@@ -115,6 +115,22 @@ message ("Crop code incompatible") is often misleading — the real cause can be
 any of the four below. Work through them from cheapest to most expensive; most
 rc=99 cases are caught in the first two.
 
+0. **Truncated `SMODEL` in the X-file** — check this first when **every** pixel
+   fails. Open `WARNING.OUT` in the pixel working directory: if it says
+   `Crop: BN; Model: RGRO 048` or `Crop: MZ; Model: ZCER 048`, the model code
+   has lost its first character. DSSAT reads `SMODEL` by fixed column (71, the
+   one its own header announces), so one character of drift in the X-file writer
+   breaks every run regardless of crop, cultivar, soil or weather.
+   **Test:**
+   ```python
+   lines = open(xfile).read().splitlines()
+   i = next(i for i, l in enumerate(lines) if l.startswith("@N GENERAL"))
+   col = lines[i].index("SMODEL")
+   print(repr(lines[i + 1][col:]))   # must read CRGRO / MZCER / CSCER ..., not RGRO / ZCER
+   ```
+   Fixed in ag-cube-cm by padding `SNAME` to its full 25 characters and keeping
+   the separator space before `SMODEL`. If you see it, your ag-cube-cm predates
+   that fix — reinstall from `main`.
 1. **Empty weather DataFrame** — the pixel had NaN weather (common at grid
    edges where the climate cube doesn't cover the soil cube extent). DSSAT
    reads zero rows and bails out.
