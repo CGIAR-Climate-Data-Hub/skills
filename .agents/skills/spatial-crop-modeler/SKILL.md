@@ -20,11 +20,11 @@ The two tools in play:
 
 Ask the user one question upfront if it's not already clear:
 
-> "Do you already have the weather and soil NetCDF datacubes, or should I download and build them too?"
+> "Do you already have the weather and soil datacubes — NetCDF or Zarr, either works — or should I download and build them too?"
 
 | Situation | Config `mode` | What happens |
 |-----------|---------------|--------------|
-| Datacubes already on disk | `with_cubes` | Skip to DSSAT simulation |
+| Datacubes already on disk (`.nc` or `.zarr`) | `with_cubes` | Skip to DSSAT simulation; no aggeodata needed |
 | Need to download everything | `full_pipeline` | Download climate → build weather cube → download soil → build soil cube → simulate |
 
 ---
@@ -37,29 +37,33 @@ Before asking the user anything, run this single command:
 
 ```bash
 python -c "
-import importlib.metadata, sys
+import importlib.metadata as md
 for pkg in ['ag-cube-cm', 'aggeodata', 'mcp']:
     try:
-        print('OK', pkg, importlib.metadata.version(pkg))
-    except importlib.metadata.PackageNotFoundError:
+        print('OK     ', pkg, md.version(pkg))
+    except md.PackageNotFoundError:
         print('MISSING', pkg)
-        sys.exit(1)
 "
 ```
 
-Interpret the output and act accordingly — do not proceed until the environment is clean:
+What each one is needed for — since **0.3.1** `aggeodata` is an optional extra, not a
+dependency, so a missing one is only a problem in `full_pipeline` mode:
 
 | Result | Action |
 |--------|--------|
-| Both print version numbers | Silent pass — continue to Step 1 |
-| `ModuleNotFoundError: ag_cube_cm` | Stop. Show install block A below. |
-| `ModuleNotFoundError: aggeodata` | Stop. Show install block B below. |
-| `ModuleNotFoundError: mcp` | Stop. Show install block C below. |
+| `ag-cube-cm` missing | Stop in either mode. Show install block A. |
+| `aggeodata` missing, mode `with_cubes` | **Fine — continue.** The core reads cubes by file format and never imports it. |
+| `aggeodata` missing, mode `full_pipeline` | Stop. Install the `pipeline` extra (block A) or aggeodata directly (block B). |
+| `mcp` missing | Only needed to run the MCP servers. Irrelevant when driving the package from Python. |
 | Any other import error | Show the exact error and ask the user to paste the full traceback |
 
 **Install block A** — ag-cube-cm missing:
 ```bash
+# with_cubes only — the core reads cubes by file format and never imports aggeodata
 pip install "ag-cube-cm[models] @ git+https://github.com/CGIAR-Climate-Data-Hub/ag-cube-cm.git"
+
+# add the `pipeline` extra only for mode: full_pipeline, which downloads via aggeodata
+pip install "ag-cube-cm[models,pipeline] @ git+https://github.com/CGIAR-Climate-Data-Hub/ag-cube-cm.git"
 # then verify:
 ag-cube-cm --version
 ```
@@ -128,21 +132,28 @@ Do not generate any files until the user confirms.
 
 Generate the appropriate YAML config file and save it to the output directory.
 
-**`with_cubes` NetCDF format contract** — `ag-cube-cm` imposes these constraints on the weather NetCDF; violations surface only as runtime errors, so verify upfront:
+**`with_cubes` datacube format contract** — since **0.3.1** the loader reads a cube by its
+*file format*, so a `.zarr` store and a `.nc` file are equally acceptable and nothing has to be
+converted. What still matters:
 
 | Requirement | How to check / fix |
 |-------------|-------------------|
-| **A `.nc` file, not a `.zarr` store** | `ag-cube-cm`'s loader accepts `.nc`, `.tif` and `.pkl` only, and raises `ValueError: Unsupported file extension '.zarr'`. The `climate-data-download` skill now writes Zarr by default — rebuild that cube with `output_format: "both"` (or `"netcdf"`) and point `weather_path` at the `.nc`. To convert one you already have: `from aggeodata.transform.zarr_export import open_cube; open_cube("cube.zarr").to_netcdf("cube.nc")` |
-| Dim names: `time`, `y`, `x` | `list(ds.dims)` — rename if `lat`/`lon` or `latitude`/`longitude` |
-| No `spatial_ref` / `crs` data vars | `ds.drop_vars([v for v in ds.data_vars if v in ("spatial_ref","crs")])` |
-| No `grid_mapping` attribute on vars | `da.attrs.pop("grid_mapping", None)` for each data variable |
+| `.nc` **or** `.zarr` (also `.tif`, `.pkl`) | Both are read natively. A Zarr store is opened with `decode_coords="all"` so `spatial_ref` becomes a coordinate and `ds.rio.crs` resolves, and scaled integers are CF-decoded and cast back to float32. Anything else raises `Unsupported file extension`. |
+| Coordinates in **degrees** | `ag-cube-cm` stamps `EPSG:4326` on the cube rather than reprojecting, so a cube in projected metres silently reports latitude 1670931 to DSSAT. This is the one that still bites. |
+| Axis names | `time` or `date` both work, and `lat`/`lon`/`latitude`/`longitude` are renamed to `y`/`x` automatically. A cube written by aggeodata's Zarr exporter arrives as `time`/`lat`/`lon` and needs no edit. |
 | CF datetime time coord | `ds.time.dtype.kind == "M"` — if integer zeros, see stacker fix in `troubleshooting.md` |
+| Soil and weather on the same grid | The valid-pixel mask ANDs the two cubes, so coordinates that differ give zero pixels. |
+
+A `spatial_ref` coordinate and `grid_mapping` attributes are fine now — the loader clears a stale
+pointer before writing the CRS. They only needed stripping in earlier releases.
 
 **`with_cubes` template:**
 ```yaml
 mode: with_cubes
 
-weather_path: D:/cubes/climate_hnd_2021_2021.nc
+# Either format. The climate-data-download skill writes Zarr by default, so a store
+# is the common case now; a .nc from an older run works unchanged.
+weather_path: D:/cubes/climate_hnd_2021_2021.zarr
 soil_path:    D:/cubes/soil_hnd.nc
 output_path:  D:/results/yield_hnd.nc
 
