@@ -20,8 +20,10 @@ runs both via `ag-cube-cm`'s combined schema.
 
 # WHAT SOILGRIDS PROVIDES
 
-SoilGrids is the only soil source `aggeodata` currently routes to. It serves
-global rasters at 250 m, available at six standard depths.
+SoilGrids is the only soil source `aggeodata` currently routes to. It serves two
+*different* products through two different endpoints, and the difference matters:
+
+**250 m — the WCS coverage API**
 
 | Variable | Description | Default? |
 |----------|-------------|----------|
@@ -32,15 +34,40 @@ global rasters at 250 m, available at six standard depths.
 | `cfvo`   | Coarse fragments volumetric (cm³/dm³)  | yes |
 | `soc`    | Soil organic carbon (dg/kg)            | yes |
 | `phh2o`  | pH in H₂O                              | yes |
-| `wv0010` | Volumetric water content at 10 kPa     | crop modeling |
-| `wv0033` | Volumetric water content at 33 kPa (field capacity) | crop modeling |
-| `wv1500` | Volumetric water content at 1500 kPa (wilting point) | crop modeling |
 | `nitrogen` | Total nitrogen (cg/kg)               | optional |
 | `cec`    | Cation exchange capacity (mmol(c)/kg)  | optional |
-| `ocd`    | Organic carbon density (hg/m³)         | optional |
-| `ocs`    | Organic carbon stocks (t/ha)           | optional |
 
-**Standard depths**: `0-5`, `5-15`, `15-30`, `30-60`, `60-100` cm (cm).
+**1 km — the aggregated hydraulic layers**, streamed from ISRIC's pre-release bucket.
+These are the water-retention points a crop model needs:
+
+| Variable | Description | Default? |
+|----------|-------------|----------|
+| `wv0010` | Volumetric water content at 10 kPa                   | crop modeling |
+| `wv0033` | Volumetric water content at 33 kPa (field capacity)  | crop modeling |
+| `wv1500` | Volumetric water content at 1500 kPa (wilting point) | crop modeling |
+
+**The resolution split is the thing to tell the user about.** A request mixing texture
+with water content produces a cube at **one** resolution — whichever
+`reference_variable` names — so one group is always resampled:
+
+- `reference_variable: sand` (or any 250 m variable) → the water layers are upsampled
+  from 1 km. The extra pixels are replicated, not measured; the cube looks sharper than
+  the water data actually is.
+- `reference_variable: wv1500` (the package default) → the texture layers are
+  downsampled to 1 km. Nothing is invented, but real 250 m detail is averaged away.
+
+Neither is wrong. For crop modeling the cube is usually resampled onto a coarser climate
+grid anyway (CHIRPS is 5 km), so `wv1500` costs nothing and avoids fake precision. For
+soil mapping, where texture detail is the point, prefer a 250 m reference. Say which you
+picked and why.
+
+**Not available**: `ocd` (organic carbon density) and `ocs` (organic carbon stocks) are
+routed by neither endpoint. Asking for them logs `Unknown SoilGrids variable` and
+**silently produces no file** — the run appears to succeed with those layers simply
+absent. Do not offer them; if the user asks, say they are not wired up rather than
+letting the gap show up later as a missing variable.
+
+**Standard depths**: `0-5`, `5-15`, `15-30`, `30-60`, `60-100` cm.
 
 **Native CRS**: Interrupted Goode Homolosine. **You must reproject explicitly to
 `EPSG:4326`** to use the cube with climate data — see Step 4.
@@ -75,11 +102,11 @@ pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data
 | Parameter | Question | Default |
 |-----------|----------|---------|
 | Country / bbox | ISO3 code, country name, or `[xmin, ymin, xmax, ymax]` in EPSG:4326? | **required** |
-| Variables | Which soil properties? | the 10 "default" / "crop modeling" rows above |
+| Variables | Which soil properties? | the 10 rows marked *yes* or *crop modeling* above. `ocd` / `ocs` are not available — do not offer them |
 | Depths | Which depth layers? | all five (`0-5`, `5-15`, `15-30`, `30-60`, `60-100`) |
 | Output folder | Where to save? **No spaces in path.** | **required** |
 | Build cube? | Stack the downloaded rasters into a single NetCDF? | yes |
-| Reference variable | The variable whose grid defines the cube's reference resolution | `sand` |
+| Reference variable | The variable whose grid defines the cube's resolution — see the 250 m / 1 km split above, because this decides which group gets resampled | `wv1500` (package default; use a 250 m variable when texture detail is the point) |
 
 If the user gives a country name, resolve to ISO3 + bounding box:
 
@@ -189,6 +216,26 @@ builder.build_and_save(
     filename="soil_{SUFFIX}.nc",
 )
 ```
+
+**Zarr output.** `build_and_save` also takes `output_format="zarr"` with
+`codec="zstd"`, which writes a Zarr v3 store instead of a NetCDF file — the same
+format the climate cube can use, so a pipeline can keep one format throughout:
+
+```python
+builder.build_and_save(
+    output_path="{OUTPUT}",
+    filename="soil_{SUFFIX}.zarr",
+    output_format="zarr",      # "netcdf" (default) | "zarr"
+    codec="zstd",              # "blosc" is smaller; "zstd" is the one GDAL reads
+)
+```
+
+Two things to know before choosing it. Soil variables are written as **float32, not
+scaled integers** — a soil profile has no time axis, so the archive is small enough
+that quantisation buys little, and each property would need its own scale. And the
+`depth` coordinate is a string (`'0-5'`), a dtype Zarr v3 has no specification for;
+Python readers handle it, `ag-cube-cm` opens such a cube directly, but another Zarr
+implementation may not. Prefer NetCDF if the cube is going somewhere outside Python.
 
 The `reference_variable` here is the SAME one chosen in Step 1 / 3 — it defines
 the cube's reference grid.
