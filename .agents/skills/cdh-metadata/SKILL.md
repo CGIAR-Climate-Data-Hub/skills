@@ -26,9 +26,10 @@ a field, see all optional fields, or the user asks for a more complete record.
 Authoring guide: read `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard/main/spec/authoring-guide.md` when you need what a
 field *means* rather than what shape it takes — see **Reference** at the end of this file.
 
-> **Coming from v0.3.0?** The data model changed substantially. Read **Moving a v0.3.0 record to
-> v0.5.0** at the end of this file before editing an existing record; a v0.3.0 record will not
-> validate, and several fields were renamed rather than removed.
+> **Editing an existing record?** Check `cdh_schema_version` first. A v0.4.x record needs the
+> small edits in **Moving a v0.4.x record to v0.5.0** (closed climate and commodity vocabularies,
+> some commodity ids renamed). A v0.3.0 record needs the full rework in **Moving a v0.3.0 record
+> to v0.5.0**. Both sections are at the end of this file.
 
 ---
 
@@ -152,9 +153,11 @@ answered, ask **Round 2** only for fields that are still missing.
 | `contact` | "Two roles are mandatory. Who is the **licensor** (the party that granted the license), and who is the **maintainer** (accountable for this record)? For each: organization (required), plus optional name, email, url, and ORCID/ROR. Other roles: `producer`, `processor`, `point-of-contact`." |
 | `citation or DOI` | "Is there a DOI (bare, e.g. `10.xxxx/...`) or a structured citation? Authors are objects: `{family, given}` for a person, `{organization}` for a body." |
 | `data locations` | "Where is the data accessible? Absolute HTTPS URL(s) or S3 URI(s). If multiple formats (Zarr + COGs), list each separately with a short name (e.g. `zarr`, `cogs`). I will resolve each URL before writing the record." |
-| `cdh.domain` | "CDH domain(s)? Options: `adaptation`, `agricultural-production`, `boundaries`, `climate`, `hydrology`, `mitigation`, `socioeconomic`" |
+| `cdh.domain` | "CDH domain(s)? Options: `adaptation`, `agricultural-production`, `boundaries`, `climate`, `hydrology`, `land`, `mitigation`, `socioeconomic`" |
 | `keywords` | "At least one keyword — required by the schema. I'll suggest some; they can optionally be linked to AGROVOC or another vocabulary." |
-| variable meaning | "For each variable: what does it measure, in what unit, and what should a reader know before using it? If any variable is coded, what does each code mean?" |
+| variable meaning | "For each variable: what does it measure, in what unit (UDUNITS-2 form: `mm d-1`, `degC`, `kg ha-1`), and what should a reader know before using it? If any variable is coded, what does each code mean?" |
+| `commodities` (if crop/livestock data) | "Which crops or livestock is the dataset *about*? I'll map them to the CDH commodity vocabulary (FAO ICC 1.1 / WCA 2030 ids, e.g. `bananas`, `maize`, `cattle`). A group like `cereals` only if the major members are covered." |
+| `climate.*` (if projection data) | "Which MIP era, models, and scenarios? Use CMIP spelling exactly (`MPI-ESM1-2-HR`, `ssp245`, `historical`) — both lists are closed vocabularies now; `ensemble` for a multi-model product." |
 
 **Round 2 — ask only if unknown:**
 
@@ -219,9 +222,10 @@ worse than a missing one: it looks authoritative and sends the next person nowhe
 | `additional_links[].url`, `additional_assets[].locations[].url` | user | warning |
 | every `extensions[]` URL | this skill | blocking — a dead extension URL makes the record unusable to every downstream tool |
 
-`s3://` URIs cannot be resolved over HTTP. Check the matching HTTPS endpoint where one exists,
-otherwise report the URI as **unchecked** rather than ok. A relative path (`./AGENTS.md`) is checked
-on disk, not over the network.
+`s3://` and service URIs such as `ee://` cannot be resolved over HTTP. Check the matching HTTPS
+endpoint where one exists, otherwise report the URI as **unchecked** rather than ok. A relative path
+(`./AGENTS.md`) is checked on disk, not over the network. An `additional_links[].id` or
+`derived_from[].id` is a Hub record, not a URL — confirm the record exists in the catalog instead.
 
 ### How to check
 
@@ -333,7 +337,9 @@ There is **no `$schema` key**. It was removed in v0.4.0 — nothing read it. The
 - An `additional_links` entry with `rel: license` when `license` is a `LicenseRef-*` expression.
 - `data[].structures` on **every** asset once the record has two or more structures.
 - Each `data[]` entry needs `locations` **or** `file_index` — and never both `href_template` and
-  `file_index`.
+  `file_index` on the entry itself. A `file_index[]` entry may carry its own `href_template`.
+- `climate.models` / `climate.scenarios` must be ids from the closed vocabularies; with `mip_era`
+  set, from that era's subset. `commodities` must be ids from the commodity vocabulary.
 - `unit` on every `x` / `y` / `xy` dimension.
 - `start_date` and `end_date` come as a pair; `date` excludes both.
 
@@ -362,8 +368,11 @@ There is **no `$schema` key**. It was removed in v0.4.0 — nothing read it. The
   different axes within one asset are two structures.
 - `variables[].nodata` is where a fill value lives. `data[].nodata` was **removed**; a representation
   storing a variable with a different fill value or type is a different structure.
-- `variables[].unit` is optional — omit it for unitless values such as class codes.
-- `variables[].data_type` is a closed list (see **Controlled vocabularies**).
+- `variables[].unit` is optional — omit it for unitless values such as class codes. Write it in
+  **UDUNITS-2** (`mm d-1`, `degC`, `kg ha-1`, `1` for dimensionless). UCUM only for what UDUNITS-2
+  cannot express (`{head}/km2`, `[pH]`); never a UCUM spelling of a UDUNITS-2 unit.
+- `variables[].data_type` is a closed list (see **Controlled vocabularies**). `array` is a column
+  whose cells hold a list; name the element type in `description`.
 - `foreign_keys[]` (was `joins[]`) sits on the structure whose columns it names:
   `{fields: [...], reference: {resource, asset?, fields: [...]}}`. `reference.resource` is a catalog
   record id or an absolute URI; `reference.asset` is required when the target has more than one
@@ -394,6 +403,9 @@ There is **no `$schema` key**. It was removed in v0.4.0 — nothing read it. The
   calendar date.
 - `extent: [first, last]` **replaces** listing every value on a regular temporal axis. It requires
   `step` and excludes `values`. On a horizontal axis, `extent` is an optional numeric `[min, max]`.
+- On an open-ended series (`temporal.end_date: null`), the temporal `extent` end is the **latest
+  value present as of `updated`**. It may lag the data but must never run ahead of it — every path
+  an `href_template` renders must exist.
 - `data_type` is available on dimensions too — give key columns one, so an admin code stored as
   `"001"` is read as text.
 - A cyclic label axis (`DJF`/`MAM`/`JJA`/`SON`) is not temporal — name it as a domain axis.
@@ -409,18 +421,25 @@ There is **no `$schema` key**. It was removed in v0.4.0 — nothing read it. The
 
 **Assets**
 - `data[]`: each entry needs a unique `name`. `locations[].url` must be an **absolute URI**.
+- A service with its own URI scheme (Google Earth Engine `ee://<asset id>`) puts that URI **first**
+  in `locations[]`; an HTTPS endpoint may follow.
 - `file_size`: whole bytes, or a number and unit (`31.1 MB`). Units B, KB, MB, GB, TB, PB in powers
   of 1000. Free text is rejected.
 - `data[].checksum`: `<algorithm>:<hex>` for single-file entries only — not allowed alongside
   `href_template` or `file_index`, and the digest must be the right length for its algorithm.
 - `data[].spatial`: one asset's own coverage, for selecting files by area. Never copied down from
   the top-level `spatial`.
-- `data[].file_index[]`: `{format, locations, title?, media_type?}` for file sets a template cannot
-  describe. `format` ∈ `stac-geoparquet`, `gti`, `vrt`, `kerchunk`, `icechunk`, `cdh-inventory`. Any
-  one index is enough. `locations[]` may be omitted on the entry when a `file_index` carries them.
+- `data[].file_index[]`: `{format, locations, href_template?, title?, media_type?}` for file sets a
+  template cannot describe. `format` ∈ `stac-geoparquet`, `gti`, `vrt`, `kerchunk`, `icechunk`,
+  `cdh-inventory`. Any one index is enough. `locations[]` may be omitted on the entry when a
+  `file_index` carries them. When the producer ships **one index file per slice** (one VRT per map,
+  as SoilGrids does), put `href_template` on the index entry (`"cogs-{crop}.vrt"`) — one entry
+  instead of hundreds; the data entry keeps describing the tiles.
 - `href_template` tokens on a temporal dimension may carry a strftime format (`{date:%Y.%m.%d}`),
-  limited to `%Y`, `%m`, `%d`.
-- `additional_links[].name` was renamed **`title`**.
+  limited to `%Y`, `%m`, `%d`. The template renders once per structure the entry holds; the files
+  are the union.
+- `additional_links[]`: each entry needs `rel` plus **either** `url` (anything outside the Hub)
+  **or** `id` (another Hub record), never both. `name` was renamed **`title`** in v0.4.0.
 - `additional_assets[].roles` suggested values: `metadata`, `validation`, `describedby`, `thumbnail`,
   `overview`, `visual`, `example` (a runnable notebook/script), `agents` (a Markdown guide for AI
   agents). A small sidecar may use a relative `url` (`./AGENTS.md`); validation checks it exists.
@@ -436,7 +455,9 @@ There is **no `$schema` key**. It was removed in v0.4.0 — nothing read it. The
   states its real end date.
 - `bbox`: 4-number array `[west, south, east, north]`, or a list of such arrays for disjoint
   coverage. Never a string.
-- `crs`: EPSG string, e.g. `"EPSG:4326"`.
+- `crs`: an authority code (`EPSG:4326`, `ESRI:54052`) or an OGC CRS URI. A PROJ or WKT string
+  only when no code exists — it is not an equal option. If inspection returns a PROJ/WKT string,
+  look up the matching code before falling back to the string.
 - `processing[]`: if present, at least one step must have `id: source`, and every step needs `id`
   and `description`. `derived_from[]` entries take **either** `url` **or** `id` (a Hub record), never
   both, plus an optional `version` pinning the source release.
@@ -566,7 +587,10 @@ unverified link.
 `dataset` | `software` | `service` | `document`
 
 ### `cdh.domain` (pick one or more)
-`adaptation` | `agricultural-production` | `boundaries` | `climate` | `hydrology` | `mitigation` | `socioeconomic`
+`adaptation` | `agricultural-production` | `boundaries` | `climate` | `hydrology` | `land` | `mitigation` | `socioeconomic`
+
+`land` (new in v0.5.0) covers soils, land cover and land use, terrain and elevation, and related
+biophysical surface layers.
 
 ### `access`
 `public` | `restricted` | `non-public` — the latter two require `access_note`.
@@ -585,7 +609,8 @@ Binary stores: `int8` `int16` `int32` `int64` `uint8` `uint16` `uint32` `uint64`
 `float32` `float64` `cint16` `cint32` `cfloat32` `cfloat64`  
 Text formats (CSV, fixed-width, JSON): `integer` `number`  
 Also: `decimal` (fixed-point with declared precision in a binary store), `boolean`, `string`,
-`binary`, `date`, `time`, `datetime`, `other` (nested types)
+`binary`, `date`, `time`, `datetime`, `array` (a list-valued column; element type in `description`),
+`other` (maps, structs, nested lists)
 
 ### Dimension types
 **Reserved (change how the dimension is read):**
@@ -613,6 +638,54 @@ For proprietary data use a `LicenseRef-*` expression plus an `additional_links` 
 `world` | `africa` | `asia` | `latin-america-and-the-caribbean` | `sub-saharan-africa`  
 Country codes follow ISO 3166-1 alpha-2 lower-case or UN M49 names in the CDH vocab
 (e.g. `ethiopia`, `colombia`, `kenya`). When in doubt, use the country name in lower-kebab-case.
+
+### `commodities` (closed, from `vocab/commodity.json`)
+Generated from the FAO Indicative Crop Classification 1.1 and the WCA 2030 livestock classification.
+Roots `crops` and `livestock`; groups such as `cereals`, `fruit-and-nuts`, `leguminous-crops`,
+`root-tuber-crops-with-high-starch-or-inulin-content`, `bovine-animals`, `poultry`, `swine-pigs`.
+Ids follow the official labels, so several changed in v0.5.0:
+
+| Old | v0.5.0 |
+|-----|--------|
+| `banana` | `bananas` |
+| `potato` | `potatoes` |
+| `pearl-millet`, `millets` | `millet` |
+| `common-bean` | `beans` |
+| `arabica-coffee`, `robusta-coffee` | `coffee` |
+| `buffalo` | `buffaloes` |
+| `swine` | `swine-pigs` |
+
+A group tag is a **coverage claim**, as in `geography`: tag `cereals` only when the major members are
+covered, otherwise list the members (`[sorghum, millet]`). Tag `crops` or `livestock` only when the
+dataset spans the groups. Do not repeat children under a tagged parent, and do not list every crop a
+dimension holds — tag what the dataset is *about*. When unsure an id exists, check
+`https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard/main/vocab/commodity.json`.
+
+### `climate.models` / `climate.scenarios` (closed, new in v0.5.0)
+Generated from the WCRP CMIP6 controlled vocabularies and the CMIP5 facets of ESGF. Ids keep the
+CMIP spelling exactly: models `MPI-ESM1-2-HR`, `EC-Earth3`, `HadGEM2-ES`; scenarios `ssp126`,
+`ssp245`, `ssp370`, `ssp585`, `rcp45`, `rcp85`, `historical` (**not** `historic`). `ensemble` is a
+valid model id for multi-model products. With `mip_era` set, both lists must come from that era's
+subset — a CMIP5 model under `mip_era: CMIP6` fails. Made-up or misspelt ids no longer validate.
+
+---
+
+## Moving a v0.4.x record to v0.5.0
+
+Small edits; the data model is unchanged.
+
+| v0.4.x | v0.5.0 |
+|--------|--------|
+| `cdh_schema_version: "v0.4.1"` and every `extensions[]` URL | `v0.5.0` throughout |
+| `commodities: [banana, potato, common-bean, …]` | renamed ids (see table above); group tags only as a coverage claim |
+| `climate.models` / `climate.scenarios` free text | exact CMIP ids; `historic` → `historical` |
+| `climate.mip_era` set with a model from the other era | fix the era or the model |
+| `unit` in UCUM where UDUNITS-2 has a form | UDUNITS-2 (`mm d-1`, `degC`) |
+| `spatial.crs` as a PROJ/WKT string that has a code | the authority code |
+| open-ended `extent` end past the latest file | the latest value present as of `updated` |
+| hundreds of per-slice VRT `file_index` entries | one entry with `href_template` |
+| `additional_links[]` pointing at a Hub record by URL | `id: <record-id>` instead of `url` |
+| soils / land cover under `climate` or `boundaries` domain | consider `land` |
 
 ---
 
@@ -647,7 +720,7 @@ these edits before it will validate:
 | relative or partial `locations[].url` | absolute URI |
 
 Also check: `temporal` date-times now need an offset and must be real calendar dates, and every
-`values[]` must be non-empty and free of duplicates.
+`values[]` must be non-empty and free of duplicates. Then apply the v0.4.x → v0.5.0 table above.
 
 ---
 

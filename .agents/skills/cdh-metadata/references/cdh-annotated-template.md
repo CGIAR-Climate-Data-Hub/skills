@@ -7,10 +7,12 @@ Official schema: https://github.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard
 Worked examples: https://github.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard/tree/main/examples  
 Real catalog records: https://github.com/CGIAR-Climate-Data-Hub/cdh-catalog/tree/main/records
 
-> **v0.4.0 reshaped the data model.** `dimensions` and `variables` now live inside `structures[]`,
-> the datacube and classification extensions are gone, `spatial.resolution` is replaced by
-> horizontal dimensions, and `version`, `created`, `updated` and a `maintainer` contact are
-> required. See **Key v0.4.x breaking changes** at the end.
+> **v0.5.0 closed the climate and commodity vocabularies.** `climate.models`, `climate.scenarios`
+> and `commodities` must now be exact ids, and several commodity ids changed (`banana` → `bananas`).
+> See **Key v0.5.0 changes** at the end. v0.4.0 reshaped the data model: `dimensions` and
+> `variables` live inside `structures[]`, the datacube and classification extensions are gone,
+> `spatial.resolution` is replaced by horizontal dimensions, and `version`, `created`, `updated` and
+> a `maintainer` contact are required. See **Key v0.4.x breaking changes**.
 
 ```yaml
 # yaml-language-server: $schema=https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/schemas/profiles/cdh.schema.json
@@ -140,7 +142,8 @@ spatial:
                                      #   bbox:
                                      #     - [10, -5, 22, 8]
                                      #     - [28, 6, 40, 20]
-  crs: EPSG:4326                     # REQUIRED for geospatial assets.
+  crs: EPSG:4326                     # REQUIRED for geospatial assets. An authority code (EPSG:4326,
+                                     # ESRI:54052) or an OGC CRS URI. PROJ/WKT only when no code exists.
   geography:                         # Optional. CDH geography vocabulary.
     - kenya
     - uganda
@@ -183,6 +186,8 @@ structures:
         step: P20Y                   # axis. Requires step, excludes values. Must be nonzero —
                                      # P0D is rejected. `step` is SPACING only: a 30-year window
                                      # every 10 years is step: P10Y with the length in description.
+                                     # On an open-ended series (end_date: null) the extent end is
+                                     # the latest value present as of `updated` — never ahead of it.
       - name: scenario
         type: scenario               # Any descriptive lowercase string is a valid non-reserved type.
         description: Emissions scenario label.
@@ -201,6 +206,8 @@ structures:
           values indicate greater heat hazard.
         data_type: float32           # Closed list — see the vocabulary table below.
         unit: day                    # Optional; omit for unitless values such as class codes.
+                                     # UDUNITS-2 form (mm d-1, degC, kg ha-1). UCUM only where
+                                     # UDUNITS-2 has no form ({head}/km2, [pH]).
         nodata: -9999                # The fill value lives HERE now, not on data[].nodata.
         note: Temperature stress only; does not represent full crop impact.
       - name: risk_class
@@ -244,7 +251,7 @@ structures:
 cdh:
   domain: [adaptation, agricultural-production]   # REQUIRED. One or more.
   # adaptation | agricultural-production | boundaries | climate | hydrology |
-  # mitigation | socioeconomic
+  # land (soils, land cover/use, terrain) | mitigation | socioeconomic
   usage:                             # Optional. Omit entirely rather than writing usage: {}.
     intended_uses:                   # Illustrative, not exhaustive. Skip terms as broad as
       - regional hotspot mapping     # "research" or "decision-making" — they guide no one.
@@ -256,9 +263,12 @@ cdh:
 
 # ── Climate extension (only when climate-related) ─────────────────────────────
 climate:
-  mip_era: CMIP6                     # CMIP5 | CMIP6
-  scenarios: [ssp245, ssp585]
-  models: [MPI-ESM1-2-HR, EC-Earth3]
+  mip_era: CMIP6                     # CMIP5 | CMIP6. When set, models and scenarios must come
+                                     # from that era's subset of the vocabularies.
+  scenarios: [ssp245, ssp585]        # CLOSED vocab (vocab/climate_scenario.json), CMIP spelling:
+                                     # ssp245, rcp85, historical (not "historic").
+  models: [MPI-ESM1-2-HR, EC-Earth3] # CLOSED vocab (vocab/climate_model.json), CMIP spelling.
+                                     # `ensemble` for a multi-model product.
   baseline:                          # Required for anomalies and baseline-relative indicators.
     start_date: "1995-01-01"
     end_date: "2014-12-31"
@@ -270,8 +280,11 @@ climate:
     resolution: 0.0833 degree
 
 # ── Agriculture extension (only when commodity-specific) ──────────────────────
-commodities:                         # Values from vocab/commodity.json.
-  - banana
+commodities:                         # CLOSED vocab (vocab/commodity.json): FAO ICC 1.1 crop ids and
+  - bananas                          # WCA 2030 livestock ids. Plural official labels: bananas,
+                                     # potatoes, beans, coffee, cattle, swine-pigs. Tag what the
+                                     # dataset is ABOUT; a group (cereals) is a coverage claim —
+                                     # use it only when the major members are covered.
 
 # ── Provenance ────────────────────────────────────────────────────────────────
 processing:                          # Optional. Every step needs `id` and `description`.
@@ -301,7 +314,8 @@ data:                                # REQUIRED. Each entry needs a unique `name
       - url: https://example.org/data/banana-risk/v2/cube.zarr
         title: HTTPS                 # Several locations = several addresses for the SAME file.
       - url: s3://example-bucket/banana-risk/v2/cube.zarr
-        title: S3
+        title: S3                    # A service with its own scheme (ee://<asset id> for Earth
+                                     # Engine) puts that URI FIRST; an HTTPS endpoint may follow.
     media_type: application/vnd.zarr; version=3
     file_size: 250 MB                # Whole bytes, or a number + unit (B/KB/MB/GB/TB/PB, ×1000).
                                      # Free text is rejected.
@@ -339,7 +353,11 @@ data:                                # REQUIRED. Each entry needs a unique `name
         media_type: text/csv
       - format: vrt
         locations:
-          - url: https://example.org/data/banana-risk/v2/tiles.vrt
+          - url: https://example.org/data/banana-risk/v2/
+        href_template: "tiles-{scenario}.vrt"
+                                     # One index file per slice (one VRT per map, as SoilGrids
+                                     # ships) → href_template on the INDEX entry, same token rules.
+                                     # The data entry still describes the tiles.
     media_type: "image/tiff; application=geotiff"
     structures: [projections]
 
@@ -366,14 +384,17 @@ additional_assets:                   # Optional. Supporting files, not the data 
 # Suggested roles: metadata | validation | describedby | thumbnail | overview |
 # visual | example (runnable code) | agents (a Markdown guide for AI agents)
 
-additional_links:                    # Optional.
+additional_links:                    # Optional. Each entry: `rel` + `url` OR `id`, never both.
   - title: Project landing page      # `title` — renamed from `name` in v0.4.0.
     rel: about
-    url: https://example.org/atlas
+    url: https://example.org/atlas   # `url` for anything outside the Hub.
     description: Landing page describing the atlas and its methods.
   - title: Changelog
     rel: version-history
     url: https://example.org/atlas/banana-climate-risk/changelog
+  - title: Monthly precipitation totals
+    rel: related
+    id: example-precipitation        # `id` links another Hub record, as derived_from[] does.
 ```
 
 ---
@@ -425,6 +446,37 @@ data:
 A geospatial record also needs `spatial.bbox` (or `spatial.geography`) and `spatial.crs`, and a
 record with named data values needs a `structures[]` entry. The validator cannot tell whether a
 record is geospatial — check those by hand.
+
+---
+
+## Key v0.5.0 changes (from v0.4.1)
+
+**Breaking**
+
+- `climate.models` and `climate.scenarios` are closed vocabularies generated from the CMIP6
+  controlled vocabularies and ESGF's CMIP5 facets. Ids keep CMIP spelling (`MPI-ESM1-2-HR`,
+  `ssp245`, `historical`); misspelt or invented ids fail. With `mip_era` set, both lists must come
+  from that era's subset. `ensemble` remains valid for multi-model products.
+- `commodities` is generated from FAO ICC 1.1 and WCA 2030 livestock, with `crops` and `livestock`
+  roots and `parents` for roll-up. Renamed ids: `banana` → `bananas`, `potato` → `potatoes`,
+  `pearl-millet` / `millets` → `millet`, `common-bean` → `beans`, `arabica-coffee` /
+  `robusta-coffee` → `coffee`, `buffalo` → `buffaloes`, `swine` → `swine-pigs`. A group tag is a
+  coverage claim: `cereals` only when the major members are covered.
+
+**Changed**
+
+- `unit` is UDUNITS-2; UCUM only for what UDUNITS-2 cannot express (`{head}/km2`, `[pH]`).
+- `spatial.crs` prefers an authority code or OGC CRS URI; PROJ/WKT only when no code exists.
+- On an open-ended series, a temporal `extent` end is the latest value present as of `updated`.
+- An `href_template` renders once per structure the entry holds; the files are the union.
+- A service with its own URI scheme (`ee://`) puts that URI first in `locations[]`.
+
+**Added**
+
+- `file_index[].href_template` — one index entry for one-index-per-slice producers.
+- `additional_links[].id` — link a Hub record by id instead of `url` (one of the two, not both).
+- `data_type: array` — a list-valued column; `other` now means maps, structs, nested lists.
+- `cdh.domain: land` — soils, land cover and use, terrain and elevation.
 
 ---
 
