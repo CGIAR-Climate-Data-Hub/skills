@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Tabs, TabItem, LinkCard, Aside } from '@astrojs/starlight/components';
 
 <Tabs>
 <TabItem label="Explanation">
@@ -64,6 +64,46 @@ nc = dl.download(extent=extent, starting_date="2020-01-01",
                  ending_date="2022-12-31", output_folder="D:/tmp/data")
 print("Saved:", nc)
 ```
+
+## Run it in a notebook
+
+If you would rather not install an agent at all, the same skill runs in a **Google Colab notebook**.
+A Gemini agent loads `climate-data-download`, resolves your area, picks the source for each variable,
+and the notebook downloads the data and builds the datacube.
+
+<LinkCard
+  title="Open the Climate Data Download notebook in Colab"
+  description="Name a place and a date range, get a validated climate datacube in Zarr."
+  href="https://colab.research.google.com/github/CGIAR-Climate-Data-Hub/skills/blob/main/notebooks/climate_data_download_example.ipynb"
+/>
+
+[View the notebook on GitHub](https://github.com/CGIAR-Climate-Data-Hub/skills/blob/main/notebooks/climate_data_download_example.ipynb)
+· [download the `.ipynb`](https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/notebooks/climate_data_download_example.ipynb)
+to run it in JupyterLab instead.
+
+**What you need.** A free [Gemini API key](https://aistudio.google.com/apikey), saved in Colab under
+**Secrets** as `GOOGLE_API_KEY` with notebook access enabled. CHIRPS, CHIRTS and NASA POWER need no
+account; **AgERA5 needs a CDS key** — see the setup section above, and paste it into the helper cell
+the notebook provides.
+
+**How it runs.**
+
+1. **Runtime ▸ Run all.** The setup cells install `aggeodata` and create the agent.
+2. Describe what you want in the `PROMPT` cell — *"daily rainfall and temperature for Ghana,
+   2020–2023"* — and answer the questions as they appear.
+3. The cube is written, validated and summarised; the maps follow in the last section.
+
+**Zarr by default.** Data is downloaded as **yearly Zarr stores** (`download_format: "zarr"`) and the
+cube is written as Zarr with the `zstd` codec (`output_format: "zarr"`). That is the format the rest
+of the Climate Data Hub tooling reads, and it avoids the thousands of daily files a NetCDF download
+leaves behind. Ask for `netcdf` if you specifically need a `.nc` file.
+
+<Aside type="note" title="Size is the decision, not the variable count">
+The extent and the date range drive the download far more than how many variables you ask for. The
+agent reports the pixel count and the estimated number of files before it starts, so a multi-year
+country request is something you agree to rather than discover. A district is minutes; a large
+country over several years can be much longer.
+</Aside>
 
 </TabItem>
 

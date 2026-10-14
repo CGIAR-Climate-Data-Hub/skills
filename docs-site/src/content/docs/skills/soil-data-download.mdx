@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Tabs, TabItem, LinkCard, Aside } from '@astrojs/starlight/components';
 
 <Tabs>
 <TabItem label="Explanation">
@@ -57,6 +57,51 @@ Depths (all in cm): `0-5`, `5-15`, `15-30`, `30-60`, `60-100`.
 A NetCDF cube (`soil_<country>.nc`) with dimensions `(y, x, depth)` per variable, in
 EPSG:4326. The skill always validates it with three checks (CRS bounds, flat-format
 reshape if needed, variable completeness) before returning.
+
+## Run it in a notebook
+
+If you would rather not install an agent at all, the same skill runs in a **Google Colab notebook**.
+A Gemini agent loads `soil-data-download`, resolves your country or district to a bounding box,
+settles the variables and depths with you, and the notebook downloads the rasters, stacks the cube
+and draws the depth profiles.
+
+<LinkCard
+  title="Open the Soil Data Download notebook in Colab"
+  description="Ask for soil in plain language, get a validated SoilGrids cube and its depth profiles."
+  href="https://colab.research.google.com/github/CGIAR-Climate-Data-Hub/skills/blob/main/notebooks/soil_data_download_example.ipynb"
+/>
+
+[View the notebook on GitHub](https://github.com/CGIAR-Climate-Data-Hub/skills/blob/main/notebooks/soil_data_download_example.ipynb)
+· [download the `.ipynb`](https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/notebooks/soil_data_download_example.ipynb)
+to run it in JupyterLab instead.
+
+**What you need.** A free [Gemini API key](https://aistudio.google.com/apikey), saved in Colab under
+**Secrets** as `GOOGLE_API_KEY` with notebook access enabled. Nothing else — SoilGrids is open, with
+no account and no key.
+
+**How it runs.**
+
+1. **Runtime ▸ Run all.** Setup takes about two minutes.
+2. Edit the request in section **4** — *"the soil a crop model needs for Yoro, Honduras"* — and
+   answer the agent's questions. Where it proposes a value, Enter accepts it.
+3. The maps and profiles appear in section **5**.
+
+**What runs on your machine, not in the agent's sandbox:**
+
+| Tool | What it does |
+|------|--------------|
+| `resolve_extent` | Turns a country or admin unit into a bounding box and reports the pixel count **before** downloading, so a whole country is a decision rather than a surprise. |
+| `download_soil` | Fetches the rasters, builds the cube, and validates it: coordinates in degrees, every requested variable present, texture summing to ~1000 g/kg, and `wv1500 < wv0033 < wv0010`. |
+| `available_water` | Field capacity minus wilting point over the profile, in mm — the number that decides how long a crop goes between rains. |
+| `plot_soil` | Draws **one** variable across the depths and returns the rest as depth-wise means. Ten variables over five depths is fifty full-resolution panels, which exhausts the Colab kernel. |
+
+<Aside type="note" title="Two resolutions in one cube">
+The general properties come from the 250 m coverage API; the three water-retention layers
+(`wv0010`, `wv0033`, `wv1500`) are published **only at 1 km**. A cube has one grid, so whichever
+variable you name as `reference_variable` decides which group gets resampled — the notebook reports
+which way it went. `ocd` and `ocs` appear in the SoilGrids catalogue but are not wired into
+aggeodata, so the notebook refuses them rather than returning a cube quietly missing those layers.
+</Aside>
 
 </TabItem>
 

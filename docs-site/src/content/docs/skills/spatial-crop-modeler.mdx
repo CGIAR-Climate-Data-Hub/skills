@@ -5,7 +5,7 @@ sidebar:
   order: 5
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Tabs, TabItem, LinkCard, Aside } from '@astrojs/starlight/components';
 
 <Tabs>
 <TabItem label="Explanation">
@@ -169,6 +169,59 @@ management:
   planting_window_days: 14
   fertilizer_schedule:  []
 ```
+
+## Run it in a notebook
+
+If you would rather not install an agent at all, the same skill runs in a **Google Colab notebook**.
+It covers the `with_cubes` path: you bring a climate cube and a soil cube, and a Gemini agent loads
+`spatial-crop-modeler`, inspects them, settles the agronomy with you, runs DSSAT per pixel and plots
+the yield maps.
+
+<LinkCard
+  title="Open the Spatial Crop Modeler notebook in Colab"
+  description="Point it at your own datacubes and get multitemporal yield maps from DSSAT."
+  href="https://colab.research.google.com/github/CGIAR-Climate-Data-Hub/skills/blob/main/notebooks/spatial_crop_modeler_example.ipynb"
+/>
+
+[View the notebook on GitHub](https://github.com/CGIAR-Climate-Data-Hub/skills/blob/main/notebooks/spatial_crop_modeler_example.ipynb)
+· [download the `.ipynb`](https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/notebooks/spatial_crop_modeler_example.ipynb)
+to run it in JupyterLab instead.
+
+**What you need.** A free [Gemini API key](https://aistudio.google.com/apikey), saved in Colab under
+**Secrets** as `GOOGLE_API_KEY` with notebook access enabled — and **two `.zarr` cubes**. Build them
+with the [climate](/skills/skills/climate-data-download/) and [soil](/skills/skills/soil-data-download/)
+notebooks first, then put them on Google Drive and give the agent their paths when it asks. DSSAT
+itself ships with `ag-cube-cm[models]`; there is nothing to license or install by hand.
+
+**How it runs.**
+
+1. **Runtime ▸ Run all.** The setup cells install `ag-cube-cm` and the DSSAT binaries.
+2. Describe what you want in the `PROMPT` cell — *"potential yield for beans in Ghana in 2020"* —
+   and answer the questions, starting with where your two cubes are.
+3. The yield maps and the quality gate appear in the last section.
+
+**What runs on your machine, not in the agent's sandbox:**
+
+| Tool | What it does |
+|------|--------------|
+| `inspect_cubes` | Opens both cubes and reports dimensions, variables, bounding box, the place name, years covered, soil depths and how many pixels will actually simulate. The cubes answer *where* and *when*, so the agent never asks you those. |
+| `align_soil_to_weather` | Averages the soil cube onto the climate grid when the two differ — SoilGrids at 250 m against CHIRPS at 5 km is the normal case, and mismatched grids simulate **zero** pixels. |
+| `run_sim` | Writes the config, runs DSSAT per pixel in parallel, and gates the result: a run where most pixels fail or yields are implausibly low is reported as such rather than mapped. |
+| `plot_maps` | Multitemporal yield panels, one per planting window and season. |
+
+<Aside type="note" title="Zarr cubes, CF variable names, and one shared grid">
+The notebook reads **`.zarr` only**. Keep the CF names `aggeodata` writes — `pr`, `tasmax`,
+`tasmin`, `rsds` — and do **not** rename them: `ag-cube-cm` maps them to its own internal names on
+read, and converts Kelvin and J/m²/day itself. The one thing that genuinely blocks a run is the two
+cubes sitting on different grids; the agent detects that and offers to fix it before simulating.
+</Aside>
+
+<Aside type="caution" title="Count the runs before you start">
+DSSAT runs once per pixel × planting window × season. A country-scale cube over four years is tens
+of thousands of simulations — `inspect_cubes` prints the estimate so you can decide. Narrow the
+years, cap `max_pixels` for a first pass, and raise `ncores` (the notebook defaults to 10, capped at
+the VM's core count) when you run the full thing.
+</Aside>
 
 </TabItem>
 
