@@ -1,4 +1,4 @@
-# CDH Metadata — Full Annotated YAML Template (v0.4.1)
+# CDH Metadata — Full Annotated YAML Template (v0.5.0)
 
 A complete reference template showing every field. Inline comments explain purpose, constraints, and
 examples. Fields not marked optional are required when the parent block is used.
@@ -13,20 +13,20 @@ Real catalog records: https://github.com/CGIAR-Climate-Data-Hub/cdh-catalog/tree
 > required. See **Key v0.4.x breaking changes** at the end.
 
 ```yaml
-# yaml-language-server: $schema=https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/schemas/profiles/cdh.schema.json
+# yaml-language-server: $schema=https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/schemas/profiles/cdh.schema.json
 
 # ── Schema declaration ────────────────────────────────────────────────────────
 # There is NO `$schema` key — it was removed in v0.4.0 because nothing read it.
 # The editor binds the profile through the yaml-language-server comment above,
 # and cdh_schema_version names the release the record targets.
-cdh_schema_version: "v0.4.1"         # REQUIRED. Always the release you authored against.
+cdh_schema_version: "v0.5.0"         # REQUIRED. Always the release you authored against.
 
 extensions:                          # REQUIRED. List every extension actually used.
   # The cdh extension is mandatory for every Hub record.
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/extensions/cdh/schema.json
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/extensions/cdh/schema.json
   # Add only when the matching block is present:
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/extensions/climate/schema.json       # climate:
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/extensions/agriculture/schema.json   # commodities:
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/extensions/climate/schema.json       # climate:
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/extensions/agriculture/schema.json   # commodities:
   # There is no datacube extension (folded into core as structures[]) and no
   # classification extension (replaced by variables[].categories). Their URLs 404.
 
@@ -68,8 +68,8 @@ note: >                              # Optional. ONLY for a caveat a reader woul
                                      # Not a catch-all: credit → attribution, provenance →
                                      # processing[].derived_from, axis labels → dimension description.
 
-created: "2026-10-07"                # REQUIRED. Date the record was first written.
-updated: "2026-10-07"                # REQUIRED. Date it was last changed.
+created: "2026-10-14"                # REQUIRED. Date the record was first written.
+updated: "2026-10-14"                # REQUIRED. Date it was last changed.
 
 # ── Discovery ─────────────────────────────────────────────────────────────────
 keywords:                            # REQUIRED. At least one. EXTRA SEARCH TERMS ONLY — aliases,
@@ -383,10 +383,10 @@ additional_links:                    # Optional.
 Everything the core schema and the CDH profile require, and nothing else.
 
 ```yaml
-# yaml-language-server: $schema=https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/schemas/profiles/cdh.schema.json
-cdh_schema_version: "v0.4.1"
+# yaml-language-server: $schema=https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/schemas/profiles/cdh.schema.json
+cdh_schema_version: "v0.5.0"
 extensions:
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/extensions/cdh/schema.json
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/extensions/cdh/schema.json
 
 id: my-dataset
 version: "1"
@@ -395,8 +395,8 @@ description: >
   What this resource is and what it can be used for.
 license: CC-BY-4.0
 resource_type: dataset
-created: "2026-10-07"
-updated: "2026-10-07"
+created: "2026-10-14"
+updated: "2026-10-14"
 
 keywords:
   - example
@@ -444,7 +444,7 @@ record is geospatial — check those by hand.
 
 **Renamed**
 
-| v0.3.0 | v0.4.1 |
+| v0.3.0 | v0.5.0 |
 |--------|--------|
 | `joins[]` | `foreign_keys[]` (Frictionless shape) |
 | `spatial.geometry_column` | `structures[].geometry_column` |

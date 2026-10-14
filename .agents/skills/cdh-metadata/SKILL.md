@@ -14,11 +14,11 @@ description: >
 
 # CDH Metadata Generator
 
-You produce valid YAML metadata records for the CGIAR Climate Data Hub (CDH) standard **v0.4.1**.
+You produce valid YAML metadata records for the CGIAR Climate Data Hub (CDH) standard **v0.5.0**.
 Inspect the dataset automatically where possible, ask the user for fields you cannot derive, and
 write a YAML file that validates against the CDH schema.
 
-Profile schema: `https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/schemas/profiles/cdh.schema.json`  
+Profile schema: `https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/schemas/profiles/cdh.schema.json`  
 Official repository: `https://github.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard`  
 Real catalog records: `https://github.com/CGIAR-Climate-Data-Hub/cdh-catalog/tree/main/records`  
 Full annotated template: read `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/cdh-metadata/references/cdh-annotated-template.md` whenever you need to check
@@ -27,7 +27,7 @@ Authoring guide: read `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/
 field *means* rather than what shape it takes — see **Reference** at the end of this file.
 
 > **Coming from v0.3.0?** The data model changed substantially. Read **Moving a v0.3.0 record to
-> v0.4.1** at the end of this file before editing an existing record; a v0.3.0 record will not
+> v0.5.0** at the end of this file before editing an existing record; a v0.3.0 record will not
 > validate, and several fields were renamed rather than removed.
 
 ---
@@ -300,26 +300,26 @@ named `<id>.yaml`.
 
 **Mandatory header:**
 ```yaml
-# yaml-language-server: $schema=https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/schemas/profiles/cdh.schema.json
-cdh_schema_version: "v0.4.1"
+# yaml-language-server: $schema=https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/schemas/profiles/cdh.schema.json
+cdh_schema_version: "v0.5.0"
 extensions:
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/extensions/cdh/schema.json
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/extensions/cdh/schema.json
 ```
 
 There is **no `$schema` key**. It was removed in v0.4.0 — nothing read it. The editor binding is the
 `yaml-language-server` comment, and `cdh_schema_version` names the release.
 
-### Hard rules (v0.4.1)
+### Hard rules (v0.5.0)
 
 **Identity and lifecycle**
-- `cdh_schema_version`: always `"v0.4.1"`
+- `cdh_schema_version`: always `"v0.5.0"`
 - `version`: **required** by the CDH profile. Letters, digits, dots, underscores, hyphens only.
   Quote labels YAML would read as numbers (`"2.0"`, `"2020"`).
 - `id`: never carries the version. Every release shares one `id`; `id` + `version` is the citable
   identity, and catalog uniqueness is the pair.
 - `previous_version` holds the predecessor's **`version`**, not its id.
 - A superseded release keeps its `id` and gains `deprecated: true` — never a renamed snapshot copy.
-- `created` / `updated`: **required**. Use today's date, e.g. `"2026-10-07"`.
+- `created` / `updated`: **required**. Use today's date, e.g. `"2026-10-14"`.
 - `parent`: the `id` of the record this one is a child representation of. It inherits **nothing** —
   a child repeats its own license, contacts, and extent.
 
@@ -467,13 +467,13 @@ Use the IANA type where one is registered, otherwise the type in common use.
 **Extension URLs (add to `extensions[]` when the matching block is used):**
 ```
 # Always add — required for CDH Hub records:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/extensions/cdh/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/extensions/cdh/schema.json
 
 # Add when using the climate: block:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/extensions/climate/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/extensions/climate/schema.json
 
 # Add when using the commodities: field:
-https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/extensions/agriculture/schema.json
+https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/extensions/agriculture/schema.json
 ```
 
 There are only three. The **datacube** and **classification** extensions were removed in v0.4.0 —
@@ -482,10 +482,10 @@ their URLs 404, and declaring one makes the record invalid.
 ### Minimal valid record
 
 ```yaml
-# yaml-language-server: $schema=https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/schemas/profiles/cdh.schema.json
-cdh_schema_version: "v0.4.1"
+# yaml-language-server: $schema=https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/schemas/profiles/cdh.schema.json
+cdh_schema_version: "v0.5.0"
 extensions:
-  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.4.1/extensions/cdh/schema.json
+  - https://cgiar-climate-data-hub.github.io/cdh-metadata-standard/v0.5.0/extensions/cdh/schema.json
 
 id: example-dataset
 version: "1"
@@ -494,8 +494,8 @@ description: >
   What the resource is and what it can be used for.
 license: CC-BY-4.0
 resource_type: dataset
-created: "2026-10-07"
-updated: "2026-10-07"
+created: "2026-10-14"
+updated: "2026-10-14"
 
 keywords:
   - example
@@ -616,15 +616,15 @@ Country codes follow ISO 3166-1 alpha-2 lower-case or UN M49 names in the CDH vo
 
 ---
 
-## Moving a v0.3.0 record to v0.4.1
+## Moving a v0.3.0 record to v0.5.0
 
 If the user hands you an existing record, check `cdh_schema_version` first. A v0.3.0 record needs
 these edits before it will validate:
 
-| v0.3.0 | v0.4.1 |
+| v0.3.0 | v0.5.0 |
 |--------|--------|
 | `"$schema": <url>` | **delete the key** |
-| `cdh_schema_version: "v0.3.0"` | `"v0.4.1"` |
+| `cdh_schema_version: "v0.3.0"` | `"v0.5.0"` |
 | `extensions: [… datacube …]` | delete; the datacube extension is folded into core |
 | `extensions: [… classification …]` | delete; use `variables[].categories` |
 | record-level `dimensions:` / `variables:` | move inside `structures[0]` |
