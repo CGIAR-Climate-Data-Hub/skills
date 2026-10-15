@@ -1,0 +1,72 @@
+---
+title: CDH Metadata Verify
+description: Adversarial verification of a CDH metadata record against the data it describes and the sources it cites — is it correct, not just well-formed?
+sidebar:
+  order: 9
+---
+
+import { Tabs, TabItem, LinkCard, Aside } from '@astrojs/starlight/components';
+
+<Tabs>
+<TabItem label="Explanation">
+
+**Type:** Metadata review  
+**Skill file:** `.agents/skills/cdh-metadata-verify/SKILL.md`  
+**Raw URL:** `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/cdh-metadata-verify/SKILL.md`
+
+---
+
+The schema validator answers *is this record well-formed?* This skill answers *is it true?* It
+opens every data asset the record points at and diffs what is stored against what the record
+claims, resolves every URL, checks the DOI against Crossref and the licence against SPDX and the
+provider's page, and checks ids against the Hub vocabularies and catalog. Then it walks the
+reviewer through the fields no script can settle — licence meaning, real contacts, honest
+descriptions, provenance — as a hostile reader.
+
+Run it after the `cdh-metadata` skill has generated a record and before you submit it, or on a
+`cdh-catalog` pull request.
+
+<Aside type="caution">
+Nothing is auto-fixed. The standard's rule (§4.6) is that an authored value wins until a person
+decides which side is wrong; the output is a severity-ranked findings table, not an edited record.
+</Aside>
+
+## What the script checks
+
+| Evidence | Checks |
+|---|---|
+| The asset itself (opened over HTTP/S3) | bbox, CRS, grid step; every declared variable exists; dtype, fill value, units; coordinate values vs declared dimension values; category codes present but undeclared; time axis vs `temporal`; COG layout; `file_size` |
+| Templates and indexes | `href_template` expanded from the structure's dimension values and each sampled file probed; `cdh-inventory` rows resolve |
+| Every URL | HEAD / ranged GET; Zarr roots via `zarr.json`; `s3://` converted to public HTTPS |
+| Crossref, SPDX, provider page | DOI resolves and its title/year/authors match the citation; licence ids are SPDX; licence tokens on the landing page agree |
+| Hub vocab and catalog | geography ids; foreign-key targets, `parent` and `derived_from` ids exist in `cdh-catalog`; FK fields exist on both sides |
+| Internal consistency and prose | ids, versions, dates, contact roles, author objects, placeholders, missing usage guidance |
+
+Severity: **HIGH** misleads a user or makes the asset unusable as described · **MED** likely
+wrong, low harm · **LOW** polish · **INFO** could not be checked (reported as *unverified*, never
+as a pass).
+
+## Running it
+
+```bash
+pip install pyyaml requests rasterio "zarr>=3" xarray duckdb
+python .agents/skills/cdh-metadata-verify/scripts/verify_record.py record.yaml \
+  --standard-dir ../cdh-metadata-standard --md report.md --json report.json
+```
+
+Exit code 1 means at least one HIGH finding.
+
+</TabItem>
+<TabItem label="Agents">
+
+Install with the skills CLI and ask your agent to *"verify this CDH record"* or *"review this
+catalog submission"*. The agent runs the script, then performs the adversarial pass from
+`SKILL.md` and returns one merged findings table with a verdict: **ready to submit**, **needs
+changes**, or **cannot verify**.
+
+```bash
+npx skills add CGIAR-Climate-Data-Hub/skills --skill cdh-metadata-verify
+```
+
+</TabItem>
+</Tabs>
