@@ -338,7 +338,7 @@ class Verifier:
     def run(self) -> Report:
         for name in ("check_schema", "check_identity", "check_dates", "check_license", "check_contacts", "check_citation",
                      "check_geography", "check_links", "check_assets", "check_structures_vs_assets", "check_spatial",
-                     "check_temporal", "check_foreign_keys", "check_provenance", "check_prose"):
+                     "check_temporal", "check_foreign_keys", "check_provenance", "check_prose", "check_authored"):
             try:
                 getattr(self, name)()
             except Exception as e:  # noqa: BLE001
@@ -954,6 +954,84 @@ class Verifier:
             self.rep.add("LOW", "/cdh/usage", "usage", "no not_recommended_for guidance — every dataset has misuse cases")
 
 
+    # ---------- authored fields (standard §4: "a person, always - no tool can supply these")
+    def _header(self) -> str:
+        return "".join(ln for ln in self.path.read_text().splitlines(keepends=True)[:8] if ln.lstrip().startswith("#"))
+
+    def check_authored(self):
+        hdr = self._header()
+        ai = re.search(r"\b(drafted|generated|written)\b.{0,40}\b(Claude|GPT|ChatGPT|Copilot|Gemini|LLM|AI|agent)\b", hdr, re.I)
+        reviewed = re.search(r"reviewed by [A-Z]", hdr) and not re.search(r"NOT (YET )?REVIEWED", hdr, re.I)
+        if ai and not reviewed:
+            self.rep.add("MED", "/", "authored", "authored fields were machine-drafted and no person has reviewed them yet",
+                         _short(hdr.strip(), 120), hint="a person must confirm title, description, note, usage and every cdh field (REVIEW.md)")
+        usage = (self.raw.get("cdh") or {}).get("usage") or {}
+        vague = re.compile(r"^\s*(research|decision[- ]making|analysis|policy|planning|monitoring|modelling|modeling|"
+                           r"general use|various|education)\s*\.?\s*$", re.I)
+        for i, u in enumerate(usage.get("intended_uses") or []):
+            t = str(u)
+            if vague.match(t):
+                self.rep.add("MED", f"/cdh/usage/intended_uses/{i}", "usage-vague",
+                             "intended use is a generic term the authoring guide says to avoid", t,
+                             hint="name the concrete task, scale and user, e.g. 'sub-national hotspot mapping'")
+            elif len(t.split()) < 3:
+                self.rep.add("LOW", f"/cdh/usage/intended_uses/{i}", "usage-vague", "intended use is very short — is it specific?", t)
+        for i, n in enumerate(usage.get("not_recommended_for") or []):
+            n = n if isinstance(n, dict) else {"use": n}
+            if not n.get("reason"):
+                self.rep.add("MED", f"/cdh/usage/not_recommended_for/{i}", "usage", "not-recommended use has no reason", n.get("use"))
+            if not n.get("use_instead"):
+                self.rep.add("LOW", f"/cdh/usage/not_recommended_for/{i}", "usage", "not-recommended use offers no alternative (use_instead)", n.get("use"))
+        if not str(self.raw.get("note") or "").strip():
+            self.rep.add("LOW", "/note", "limitations", "no record-level note — where are the dataset-wide limitations and assumptions?",
+                         hint="standard: record-level `note` holds dataset-wide limitations; method assumptions go in `processing`")
+        for i, st in enumerate(self.raw.get("processing") or []):
+            if isinstance(st, dict) and len(str(st.get("description") or "")) < 30:
+                self.rep.add("LOW", f"/processing/{i}/description", "assumptions", "processing step barely described — method assumptions undocumented",
+                             st.get("description"))
+
+
+def review_sheet(v: "Verifier") -> str:
+    """A checklist for the person who owns the authored fields. Written once; never overwritten."""
+    r = v.raw
+    hdr = v._header()
+    usage = (r.get("cdh") or {}).get("usage") or {}
+    ai = bool(re.search(r"\b(drafted|generated|written)\b.{0,40}\b(Claude|GPT|ChatGPT|Copilot|Gemini|LLM|AI|agent)\b", hdr, re.I))
+    # code span: keeps URLs and markup in draft text from rendering (or failing lint) in the sheet
+    q = lambda x: "`" + _short(x, 220).replace("`", "'").replace("|", "\\|").replace("\n", " ").strip() + "`" if x else "*(empty)*"
+    rows = [
+        ("title", r.get("title"), "Is this what the producer calls it? Would a user searching for it find it?"),
+        ("description", r.get("description"), "Every claim true and sourced (coverage, counts, years, units)? Anything overstated?"),
+        ("note — limitations", r.get("note"), "Does it state the main limitations: coverage gaps, resolution or aggregation level, "
+         "known artefacts, revisions, licence traps? What would bite a first-time user that is not here?"),
+        ("note / processing — assumptions", "; ".join(str((p or {}).get("description", "")) for p in r.get("processing") or []),
+         "Are the method assumptions behind the values stated (modelled vs observed, thresholds, weighting, projections)?"),
+        ("license / attribution", f"{r.get('license')} — {r.get('attribution') or ''}", "Checked against the producer's own terms page, not a mirror?"),
+        ("cdh.domain", r.get("cdh", {}).get("domain"), "Right domain(s) for how CDH users will look for it?"),
+    ]
+    for i, u in enumerate(usage.get("intended_uses") or []):
+        rows.append((f"intended_uses[{i}]", u, "Specific task and scale? Would the producer endorse it? Is the data fit for it at its resolution?"))
+    for i, n in enumerate(usage.get("not_recommended_for") or []):
+        n = n if isinstance(n, dict) else {"use": n}
+        rows.append((f"not_recommended_for[{i}]", f"{n.get('use')} — because {n.get('reason')} — instead: {n.get('use_instead')}",
+                     "Is the reason true for this dataset? Is the alternative really better, and available?"))
+    rows.append(("missing misuse?", "", "What is the misuse you would worry about most? If it is not listed above, add it."))
+    out = [f"# Human review — `{r.get('id')}`", "",
+           "The fields below are **authored** fields (CDH standard §4: a person, always). "
+           + ("They were drafted by an AI agent from the evidence in the record header; " if ai else "")
+           + "tick each one only after checking it against the source. Edit the YAML, not this sheet.", "",
+           "| ✓ | Field | Draft value | Check |", "|---|---|---|---|"]
+    out += [f"| [ ] | {f} | {q(val)} | {chk} |" for f, val, chk in rows]
+    out += ["", "When done: change the YAML header to `reviewed by <name> <date>` and rerun the verifier.", "",
+            "## AI usage disclosure (paste at the top of the catalog PR)", "",
+            "```text",
+            f"AI usage: {'AI-drafted — record drafted by an AI agent from the sources listed; ' if ai else 'none / AI-assisted (edit) — '}"
+            "verified with cdh-metadata-verify.",
+            "Human review: <name>, <date> — authored fields checked against the sources (REVIEW.md).",
+            "```", ""]
+    return "\n".join(out)
+
+
 # ----------------------------------------------------------------------------- output
 def to_markdown(rep: Report) -> str:
     rows = rep.sorted()
@@ -973,14 +1051,15 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("record", nargs="+", help="record YAML file(s)")
     ap.add_argument("--json", help="write JSON findings here (one file → object; many → list)")
-    ap.add_argument("--md", help="write Markdown report here")
+    ap.add_argument("--md", help="write Markdown report here (a hand-written '## Triage' section already in the file is kept)")
+    ap.add_argument("--review", help="write the human-review checklist for authored fields here, unless the file already exists")
     ap.add_argument("--no-remote", action="store_true", help="skip every network check")
     ap.add_argument("--catalog-ids", help="comma-separated known catalog record ids (else fetched from cdh-catalog)")
     ap.add_argument("--standard-dir", help="local clone of cdh-metadata-standard → also runs scripts/validate-yaml.js")
     ap.add_argument("--max-template", type=int, default=6)
     ap.add_argument("-q", "--quiet", action="store_true")
     a = ap.parse_args(argv)
-    reports = []
+    reports, verifiers = [], []
     worst = 0
     for rp in a.record:
         p = Path(rp)
@@ -992,12 +1071,24 @@ def main(argv=None) -> int:
             return 2
         rep = v.run()
         reports.append(rep)
+        verifiers.append(v)
         if any(f.severity == "HIGH" for f in rep.findings):
             worst = 1
         if not a.quiet:
             print(to_markdown(rep))
     if a.md:
-        Path(a.md).write_text("\n\n".join(to_markdown(r) for r in reports))
+        md = Path(a.md)
+        keep = ""
+        if md.exists():
+            m = re.search(r"^## Triage.*", md.read_text(), re.M | re.S)
+            keep = "\n" + m.group(0) if m else ""
+        md.write_text("\n\n".join(to_markdown(r) for r in reports) + keep)
+    if a.review:
+        rv = Path(a.review)
+        if rv.exists():
+            print(f"{rv} exists — not overwritten (it holds the reviewer's ticks)", file=sys.stderr)
+        else:
+            rv.write_text("\n\n".join(review_sheet(v) for v in verifiers))
     if a.json:
         payload = [{**asdict(r), "findings": [asdict(f) for f in r.sorted()]} for r in reports]
         Path(a.json).write_text(json.dumps(payload[0] if len(payload) == 1 else payload, indent=2, default=str))

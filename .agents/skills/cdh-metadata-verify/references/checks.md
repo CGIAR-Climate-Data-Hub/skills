@@ -35,6 +35,7 @@ every check below runs on the live catalog too.
 | `fk-fields`, `fk-reference`, `fk-target`, `fk-target-fields` | structure columns; cdh-catalog record list; target Parquet schema | FK field not in structure; no reference; target id not in catalog / URL dead; referenced field not in target | | |
 | `provenance`, `parent` | record; cdh-catalog | `derived_from` with both id and url; id not in catalog; placeholder code URL; `parent` not in catalog | derived product with no `processing[]` | source version / code version not pinned |
 | `prose`, `prose-year`, `usage` | record text | placeholder markers; SAMPLE/FICTIONAL | description < 80 chars | year in description not in `temporal`; no `not_recommended_for` |
+| `authored`, `usage-vague`, `usage`, `limitations`, `assumptions` | YAML header + authored fields | — | AI-drafted with no `reviewed by`; intended use is a banned generic term; not-recommended use without `reason` | intended use < 3 words; no `use_instead`; no record-level `note`; processing step < 30 chars |
 
 ## Tolerances
 

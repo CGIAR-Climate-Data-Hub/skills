@@ -30,7 +30,14 @@ authored value always wins; a disagreement is reported for a person to decide).
 python scripts/verify_record.py <record.yaml> [--standard-dir <clone of cdh-metadata-standard>] [--md report.md] [--json report.json]
 python scripts/verify_record.py records/*/*.yaml --md catalog-review.md          # a whole catalog
 python scripts/verify_record.py record.yaml --no-remote                           # offline consistency only
+python scripts/verify_record.py record.yaml --md verify-report.md --review REVIEW.md  # + human checklist for authored fields
 ```
+
+`--md` keeps a hand-written `## Triage` section already in the file, so reruns do not wipe the
+reviewer's notes. `--review` writes `REVIEW.md` once (never overwritten): every *authored* field
+(standard §4, "a person, always") with the question a person must answer, ending with the **AI usage
+disclosure** block to paste at the top of the catalog PR (agreed in cdh-catalog#74 — the catalog keeps
+no AI marker in the metadata).
 
 Requires `pyyaml` and `requests`. Each optional library unlocks a class of checks and its absence
 is reported as `INFO`, never counted as a pass: `rasterio` (GeoTIFF/COG), `xarray` + `zarr>=3`
@@ -88,6 +95,22 @@ never "correct" a value from memory.
 - `cdh.usage.not_recommended_for` names the real misuse cases (trend claims on a product whose
   inputs changed; station-level use of a satellite product; comparing incompatible flavours).
 - Duplicate: is this the same resource as an existing record under another id or version?
+
+**HIGH — authored judgement fields (a person with domain knowledge must sign these off)**
+
+The script can prove a link dead or a unit wrong; it cannot prove a use case sensible. On an
+AI-drafted record, treat these as unreviewed until `REVIEW.md` is ticked and the header says
+`reviewed by <name> <date>`:
+
+- `cdh.usage.intended_uses` — a concrete task at a stated scale the data is fit for at its
+  resolution and coverage; never "research" or "decision-making".
+- `cdh.usage.not_recommended_for` — the misuse that would actually happen, a `reason` that is true
+  for *this* dataset, and a `use_instead` that exists and is better. Ask: what would I most worry
+  about a first-time user doing? If it is not listed, it is missing.
+- Limitations — record-level `note`: coverage gaps, aggregation level, artefacts, revisions,
+  licence traps. There is no separate limitations field.
+- Assumptions — `processing[].description` / `note`: modelled vs observed, thresholds, weighting,
+  projections mixed with actuals.
 
 **MED — wrong but low-harm**
 
