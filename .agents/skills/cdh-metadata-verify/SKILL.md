@@ -8,7 +8,8 @@ description: >
   submit it", "what's wrong with this record", or as the last step after the cdh-metadata skill
   has generated a record. Also use it to review a cdh-catalog pull request. It runs a deterministic
   script that opens every data asset and diffs it against the record, then guides a hostile
-  human-style review of the fields no script can settle. It never edits the record.
+  human-style review of the fields no script can settle, then has a metadata-only sub-agent try
+  to use the data and log where it gets stuck. It never edits the record.
 ---
 
 # CDH Metadata Verify — assume every field is wrong until the data or a primary source proves it
@@ -19,7 +20,7 @@ does not exist in the store, a licence the provider never granted, a DOI that po
 paper, or a template whose files are named the other way round. Each of those was found in the live
 catalog the first time this ran.
 
-Two halves. Run both. Report findings; **never fix the record silently** (standard §4.6: an
+Three parts. Run all three. Report findings; **never fix the record silently** (standard §4.6: an
 authored value always wins; a disagreement is reported for a person to decide).
 
 ---
@@ -128,6 +129,27 @@ AI-drafted record, treat these as unreviewed until `REVIEW.md` is ticked and the
 
 ---
 
+## Part 3 — usability test by a metadata-only agent
+
+The script and the adversarial pass check that the record is true. Neither checks that it is
+**usable**. So spawn a sub-agent that sees only the record and the URLs inside it. Give it a real
+task built from `cdh.usage.intended_uses` plus a test geography, e.g. "development finance to
+Kenya; can I get Homa Bay County?". It downloads a small sample, answers the task, and logs every
+step as OK / GUESSED / BAFFLED / BLOCKED, with the fix it needed. It ends with a 1-10 score for
+"could a first-time user succeed with this record alone?".
+
+Start it in the background at the beginning, so it runs while you do Parts 1 and 2. Then check
+its claims against the source before you act on them. Merge its findings into the table with
+check `user-test`: HIGH for anything that yields a wrong number without warning. Re-run it after
+substantive changes. Target score: 8 or more before submission.
+
+Prompt template, task recipe, triage table and score guide: `references/user-test-agent.md`.
+This part found the costliest error in the first record it ran on (a provider aggregate silently
+halving a country total), after the schema check, the link check, Part 1 and a human reviewer had
+all passed it.
+
+---
+
 ## Output
 
 One severity-ranked table, script findings and adversarial findings merged, then a verdict:
@@ -137,7 +159,7 @@ One severity-ranked table, script findings and adversarial findings merged, then
 ```
 
 Verdict is one of **ready to submit** (no HIGH, every MED either fixed or consciously accepted
-with a reason), **needs changes** (list the HIGH items), or **cannot verify** (list what was
+with a reason, Part 3 score 8 or more), **needs changes** (list the HIGH items), or **cannot verify** (list what was
 unreachable and who can check it). Mark anything the script reported as INFO/unchecked explicitly
 as **UNVERIFIED** — silence is not a pass.
 

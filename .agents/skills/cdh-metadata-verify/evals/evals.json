@@ -1,8 +1,9 @@
 {
-  "skill": "cdh-metadata-verify",
+  "skill_name": "cdh-metadata-verify",
   "description": "Realistic prompts that should trigger the skill, with the behaviour a correct run shows.",
   "evals": [
     {
+      "id": 1,
       "name": "verify a freshly generated record before submission",
       "prompt": "I just wrote records/worldcover-admin/worldcover-admin.yaml with the cdh-metadata skill. Check it is actually correct before I submit it to the catalog.",
       "expected_behaviour": [
@@ -19,6 +20,7 @@
       ]
     },
     {
+      "id": 2,
       "name": "review a catalog pull request",
       "prompt": "Review PR #57 on cdh-catalog — it adds records/esa-worldcover-2021/esa-worldcover-2021.yaml. Is it right?",
       "expected_behaviour": [
@@ -33,6 +35,7 @@
       ]
     },
     {
+      "id": 3,
       "name": "offline consistency check",
       "prompt": "No network here — what can you tell me about this record's internal consistency? (pastes a YAML)",
       "expected_behaviour": [
@@ -41,6 +44,18 @@
       ],
       "must_not": [
         "Claim URLs, DOI, licence or asset contents were verified."
+      ]
+    },
+    {
+      "id": 4,
+      "name": "usability test with a metadata-only agent",
+      "prompt": "Before Brayden reviews hub-submissions/drafts/oecd-rio-markers/oecd-rio-markers.yaml, check that someone could actually use it to find adaptation finance to Kenya.",
+      "expected_behaviour": [
+        "Starts a background sub-agent that may use only the record and the URLs inside it, with a task built from cdh.usage.intended_uses and a test geography (country plus a sub-national unit).",
+        "The agent logs each step as OK / GUESSED / BAFFLED / BLOCKED with the field path and a suggested fix, writes answer.md, and scores the record 1-10.",
+        "Confirms the agent's key findings against the source (reruns the query or opens the page) before reporting them.",
+        "Merges the findings into the severity table with check user-test, rating as HIGH anything that yields a wrong number without warning.",
+        "Does not edit the record; recommends re-running the agent after fixes and reports the score."
       ]
     }
   ]

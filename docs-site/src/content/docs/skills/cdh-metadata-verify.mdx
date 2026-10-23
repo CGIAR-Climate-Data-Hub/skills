@@ -56,6 +56,16 @@ python .agents/skills/cdh-metadata-verify/scripts/verify_record.py record.yaml \
 
 Exit code 1 means at least one HIGH finding.
 
+## Usability test (Part 3)
+
+The script and the adversarial review show a record is **true**. Part 3 shows it is **usable**.
+A sub-agent that sees only the record and the links inside it gets a real task, e.g.
+"development finance to Kenya; can I get Homa Bay County?". It downloads a small sample, answers
+the task, and logs each step as OK / GUESSED / BAFFLED / BLOCKED with the fix it needed. It then
+scores the record 1-10; aim for 8 or more before submission. On its first run it found a provider
+aggregate that halved a country's total, which every other check had passed. Prompt template and
+triage rules: `references/user-test-agent.md`.
+
 </TabItem>
 <TabItem label="Agents">
 
