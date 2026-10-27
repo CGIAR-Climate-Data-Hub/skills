@@ -982,6 +982,22 @@ class Verifier:
                 self.rep.add("MED", f"/cdh/usage/not_recommended_for/{i}", "usage", "not-recommended use has no reason", n.get("use"))
             if not n.get("use_instead"):
                 self.rep.add("LOW", f"/cdh/usage/not_recommended_for/{i}", "usage", "not-recommended use offers no alternative (use_instead)", n.get("use"))
+        for i, n in enumerate(usage.get("not_recommended_for") or []):
+            u = str((n if isinstance(n, dict) else {"use": n}).get("use") or "")
+            first = u.split()[0].lower() if u.split() else ""
+            if first and not (first.endswith("ing") or first in ("do", "use", "don't", "never", "treat", "compare", "add", "sum")):
+                self.rep.add("LOW", f"/cdh/usage/not_recommended_for/{i}/use", "usage-wording",
+                             "not-recommended use reads as a fragment — write it as a full action", u,
+                             hint="e.g. 'Using this dataset to ...', 'Adding X and Y together'")
+        for path, txt in [("/note", self.raw.get("note"))] + [(f"/processing/{i}/description", (st or {}).get("description"))
+                                                             for i, st in enumerate(self.raw.get("processing") or [])]:
+            t = str(txt or "")
+            if re.search(r"linked (from|in) this record|see (the )?links|links below", t, re.I) and "http" not in t:
+                self.rep.add("LOW", path, "inline-links", "text points the reader to links without giving them",
+                             _short(t, 120), hint="put the URL inline where the text refers to the source")
+        if re.search(r"\blicen[cs]e\b|CC BY|CC-BY", str(self.raw.get("note") or ""), re.I):
+            self.rep.add("LOW", "/note", "limitations", "note discusses the licence — keep it to limitations",
+                         hint="licence terms go in `license` and `attribution`")
         if not str(self.raw.get("note") or "").strip():
             self.rep.add("LOW", "/note", "limitations", "no record-level note — where are the dataset-wide limitations and assumptions?",
                          hint="standard: record-level `note` holds dataset-wide limitations; method assumptions go in `processing`")
@@ -1015,7 +1031,9 @@ def review_sheet(v: "Verifier") -> str:
         n = n if isinstance(n, dict) else {"use": n}
         rows.append((f"not_recommended_for[{i}]", f"{n.get('use')} — because {n.get('reason')} — instead: {n.get('use_instead')}",
                      "Is the reason true for this dataset? Is the alternative really better, and available?"))
-    rows.append(("missing misuse?", "", "What is the misuse you would worry about most? If it is not listed above, add it."))
+    rows.append(("missing incorrect use?", "", "Is there a way people are likely to misuse this data that is not listed above?"))
+    rows.append(("missing limitation?", "", "Is there a gap or weakness in the data itself (coverage, quality, timing) that the note does not mention?"))
+    rows.append(("missing assumption?", "", "Is there an assumption behind how the values are produced that the method text does not state?"))
     out = [f"# Human review — `{r.get('id')}`", "",
            "The fields below are **authored** fields (CDH standard §4: a person, always). "
            + ("They were drafted by an AI agent from the evidence in the record header; " if ai else "")

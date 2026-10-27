@@ -113,6 +113,29 @@ AI-drafted record, treat these as unreviewed until `REVIEW.md` is ticked and the
 - Assumptions — `processing[].description` / `note`: modelled vs observed, thresholds, weighting,
   projections mixed with actuals.
 
+Lessons from the first human reviews (OECD CRS, three rounds). Check each before a person sees the
+record; every one of them cost a review round:
+
+- **Licence from the producer's own terms page, data separated from documents.** The OECD's CC BY
+  4.0 grant covers its written content; its data have their own terms. A licence copied from a
+  publications page is the commonest wrong licence.
+- **Description lists what the dataset contains** (its variables or measures, in a sentence or
+  two), leaving the detail to `structures`.
+- **Coverage says exactly which places or units are in and out, with a link** to the producer's
+  list (e.g. the DAC List of ODA Recipients), not just a name for the list.
+- **Limitations are practical and in plain language:** what is missing, what it covers, how it is
+  revised and when, what the finest geography is. API quirks belong in `data[].description`, not
+  in `note`.
+- **Keep incorrect uses, limitations and assumptions apart.** `note` holds limitations (say so in
+  its first line); assumptions behind the values go in `processing`; misuses go in
+  `not_recommended_for`. Licence text goes in `license`/`attribution`, not `note`.
+- **Method says how the producer compiles the data**, with the source documents linked **inline,
+  where the text refers to them**. Never write "linked from this record".
+- **Intended uses each give the context, the how, and a runnable example**, not a one-line label.
+- **Not-recommended uses are full actions in plain language** ("Using this dataflow to measure
+  climate finance", not "Climate finance from this dataflow"). Include high-level methodological
+  misuses (totals read as complete, commitments read as spending), not only technical traps.
+
 **MED — wrong but low-harm**
 
 - `title` verbatim from the provider; `version` is the provider's label (`v2r2`), not ours.
