@@ -44,16 +44,19 @@ masked = mask_to_admin(ds, country_iso3="BOL", admin_level=1)
 
 Computes per-admin-unit statistics and returns a tidy DataFrame.
 
+Spatial only: it keeps the input's time step. For monthly, annual, or seasonal values, run
+`aggregate_time` from the [Datacube Temporal Aggregator](../datacube-temporal-aggregator/) first.
+
 ```python
+monthly = aggregate_time(ds, "month", "sum")   # datacube-temporal-aggregator
 df = summarize_by_admin(
-    ds, boundaries,
-    agg_method="mean",        # "mean", "sum", "min", "max"
-    temporal_freq="ME",       # "ME" monthly, "YE" annual, None = no resampling
+    monthly, boundaries,
+    spatial_agg="mean",       # statistic over the pixels in each unit
     output_csv="summary.csv"
 )
 ```
 
-Output columns: `admin_unit`, `variable`, `time`, `value`
+Output columns: `admin_unit`, `variable`, `time`, `period`, `value`
 
 ## Common pitfalls
 

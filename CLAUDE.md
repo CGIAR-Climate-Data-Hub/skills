@@ -14,7 +14,8 @@ in the skill files.
 | Download **and** visualize / "show me" / "I want to see" / "full pipeline" | `.agents/skills/gcf-pipeline/SKILL.md` |
 | Download climate data only (no visualization requested) | `.agents/skills/climate-data-download/SKILL.md` |
 | Download soil data (SoilGrids) / build soil cube | `.agents/skills/soil-data-download/SKILL.md` |
-| Process / clip / aggregate already-downloaded data | `.agents/skills/geospatial-cube-processor/SKILL.md` |
+| Process / clip / stack / summarize by region (spatial) already-downloaded data | `.agents/skills/geospatial-cube-processor/SKILL.md` |
+| Summarize a datacube over time — monthly, annual, seasonal, custom window, climatology | `.agents/skills/datacube-temporal-aggregator/SKILL.md` |
 | Plot / chart / notebook from existing data | `.agents/skills/notebook-plots/SKILL.md` |
 | Spatial crop modeling / run crop model over a region | `.agents/skills/spatial-crop-modeler/SKILL.md` |
 | Create / generate CDH metadata YAML for a dataset | `.agents/skills/cdh-metadata/SKILL.md` |
@@ -29,6 +30,15 @@ in the skill files.
 - "full pipeline"
 - "per department / per region / per province / per district" combined with a variable name
 - any prompt that clearly implies **all three steps**: fetch data + spatial aggregation + plot
+
+### datacube-temporal-aggregator trigger phrases (read `.agents/skills/datacube-temporal-aggregator/SKILL.md` when any of these appear)
+
+- "monthly totals / means", "annual rainfall", "per year", "per month"
+- "per season", "seasonal mean", "DJF / MAM / JJA / SON"
+- a date window: "Jun–Sep", "Nov to Mar", "growing season", "long rains / short rains"
+- "climatology", "average month", "typical year"
+- combined with "per district / region" → run this first, then `summarize_by_admin` in geospatial-cube-processor
+- not when the user also wants the data downloaded and plotted — gcf-pipeline calls this skill itself
 
 ### climate-data-download trigger phrases (read `.agents/skills/climate-data-download/SKILL.md` when any of these appear)
 

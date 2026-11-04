@@ -19,15 +19,16 @@
     {
       "id": 2,
       "prompt": "I've got a masked xarray Dataset `ds_masked` covering Colombia (COL) with variables 'precipitation' and 'temperature' and a time dimension (daily, 2020–2022). I have a GeoDataFrame `gdf_departments` with Colombia's departments loaded from a local shapefile. Write me a summarize_by_admin function that computes monthly mean precipitation and temperature per department and saves results to 'colombia_monthly_stats.csv'.",
-      "expected_output": "summarize_by_admin function written inline that clips to each department, resamples to monthly frequency using xr.resample(time='ME'), computes mean, and outputs a tidy DataFrame saved to the specified CSV path. Columns: admin_unit, variable, time, value.",
+      "expected_output": "Monthly aggregation runs first, per pixel, with aggregate_time(ds, 'month', 'mean') from the datacube-temporal-aggregator skill; summarize_by_admin (spatial only) then takes the spatial mean per department and saves the tidy DataFrame to the specified CSV. Columns: admin_unit, variable, time, period, value.",
       "files": [],
       "assertions": [
-        "summarize_by_admin function is present with boundaries, agg_method, temporal_freq, and output_csv parameters",
-        "xr.resample with time='ME' or temporal_freq='ME' is used for monthly aggregation",
+        "summarize_by_admin is present with boundaries, spatial_agg, and output_csv parameters and has no temporal-frequency parameter",
+        "monthly aggregation is done before summarize_by_admin with aggregate_time(..., 'month', 'mean') from datacube-temporal-aggregator",
         "rio.clip is used to iterate over admin units",
-        "output DataFrame has admin_unit, variable, time, value columns (mentioned or demonstrated)",
+        "the spatial statistic per department is a mean, not a sum over pixels",
+        "output DataFrame has admin_unit, variable, time, period, value columns (mentioned or demonstrated)",
         "output_csv='colombia_monthly_stats.csv' is passed in the example call",
-        "has_time check is present to handle static vs time-varying layers"
+        "static (no time dim) layers are handled"
       ]
     },
     {

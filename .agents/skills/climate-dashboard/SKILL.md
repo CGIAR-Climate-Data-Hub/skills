@@ -39,9 +39,11 @@ Extract from context. Ask only for what is genuinely missing.
 | Column | Type | Notes |
 |--------|------|-------|
 | `variable` | string | e.g. `rsds`, `WS2M`, `pr` |
-| `time` | date string | `YYYY-MM-DD` |
+| `time` | date string | `YYYY-MM-DD` — start of the period; empty for a monthly climatology |
 | `value` | float | aggregated value |
 | `admin_unit` | string | optional — present for admin_level ≥ 1 |
+| `period` | string | optional — readable label (`2020-01`, `MAM 2020`, `Nov-Mar 2020-21`); use it for axis and table labels when present |
+| `month` | int | optional — 1–12, present instead of `time` for a monthly climatology |
 
 ---
 
@@ -52,7 +54,8 @@ import pandas as pd
 
 df = pd.read_csv("{CSV_PATH}")
 df["time"] = pd.to_datetime(df["time"], errors="coerce")
-df["month"] = df["time"].dt.month
+if "month" not in df.columns:  # a monthly climatology CSV already has `month` and no `time`
+    df["month"] = df["time"].dt.month
 df["year"]  = df["time"].dt.year
 
 variables = df["variable"].unique().tolist()

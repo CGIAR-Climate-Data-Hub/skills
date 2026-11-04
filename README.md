@@ -48,6 +48,7 @@ updates.
 | [`climate-data-download`](#climate-data-download) | Data ingestion | Downloads CHIRPS, CHIRTS-ERA5, AgERA5, and NASA POWER climate data for any country or bounding box |
 | [`soil-data-download`](#soil-data-download) | Data ingestion | Downloads SoilGrids soil property rasters (clay, sand, silt, organic carbon, pH, water content) at multiple depths and builds a validated soil datacube |
 | [`geospatial-cube-processor`](#geospatial-cube-processor) | Spatial processing | Clips rasters to admin boundaries, stacks multi-source datasets, and computes zonal statistics |
+| [`datacube-temporal-aggregator`](#datacube-temporal-aggregator) | Temporal processing | Summarizes a datacube over time — monthly, annual, DJF/MAM/JJA/SON, custom season windows (incl. across the new year), or monthly climatology — keeping it gridded |
 | [`spatial-crop-modeler`](#spatial-crop-modeler) | Crop modeling | Orchestrates spatial DSSAT simulations over climate + soil datacubes via `ag-cube-cm`, producing pixel-level yield maps |
 | [`notebook-plots`](#notebook-plots) | Visualization | Writes Plotly time-series and choropleth charts into an existing Jupyter notebook; also exports a standalone Plotly HTML |
 | [`sciplot-skill`](#sciplot-skill) | Visualization | Generates publication-ready Matplotlib/Seaborn plotting code meeting Nature/Science/Cell journal standards from tabular data |
@@ -173,21 +174,51 @@ Works with any gridded dataset (xarray, lat/lon, EPSG:4326) — climate, soil, e
 |----------|--------------|
 | `mask_to_admin` | Clip a raster to a country or admin boundary (GADM v4.1) |
 | `stack_datasets` | Merge multi-source datasets onto a common grid (rioxarray reproject_match) |
-| `summarize_by_admin` | Zonal statistics per admin unit → CSV (mean, sum, max, min, by month/year) |
+| `summarize_by_admin` | Zonal statistics per admin unit → CSV (spatial mean by default; keeps the input's time step) |
 | `export_cog` | Write Cloud Optimized GeoTIFF per variable |
 
 **Example:**
 
 ```
 User: Clip my CHIRPS dataset to Ethiopia at province level and compute
-      monthly mean precipitation per province.
+      monthly total precipitation per province.
 
-Skill: [writes mask_to_admin and summarize_by_admin into your notebook]
+Skill: [writes mask_to_admin and summarize_by_admin; aggregate_time comes from
+        datacube-temporal-aggregator]
 
 # Result:
 eth_chirps = mask_to_admin(chirps, "ETH", admin_level=1)
-df = summarize_by_admin(eth_chirps, boundaries, agg_method="mean",
-                        temporal_freq="ME", output_csv="eth_precip_monthly.csv")
+monthly = aggregate_time(eth_chirps, "month", "sum")
+df = summarize_by_admin(monthly, boundaries, output_csv="eth_precip_monthly.csv")
+```
+
+---
+
+## datacube-temporal-aggregator
+
+**Skill path:** `.agents/skills/datacube-temporal-aggregator/`
+
+Writes one function, `aggregate_time`, that summarizes the time axis of a gridded xarray datacube
+per pixel and keeps the result gridded — ready for a map, a COG, a crop model, or
+`summarize_by_admin`.
+
+| `period` | Output |
+|----------|--------|
+| `"month"` / `"year"` | calendar months / years |
+| `"season"` | DJF, MAM, JJA, SON |
+| `"window"` | custom dates, e.g. `{"JJAS": ("06-01", "09-30")}` or `{"Nov-Mar": ("11-01", "03-31")}` across the new year |
+| `"monthly_climatology"` | mean of each calendar month across all years |
+
+Sums keep masked pixels as NaN, and periods only partly covered by the data (e.g. a DJF missing its
+December) are dropped rather than reported as low totals.
+
+**Example:**
+
+```
+User: Total rainfall for the long rains (Mar–May) and short rains (Oct–Dec) for every year.
+
+seasons = aggregate_time(ds, "window", "sum",
+                         windows={"long rains": ("03-01", "05-31"), "short rains": ("10-01", "12-31")})
 ```
 
 ---
@@ -407,8 +438,9 @@ Skills chain naturally across a research workflow:
 
 ```
 1. climate-data-download  →  fetch precipitation and temperature rasters
-2. geospatial-cube-processor  →  clip, stack, compute zonal stats
-3. (gcf-pipeline runs all three in one go)
+2. datacube-temporal-aggregator  →  monthly / annual / seasonal summaries
+3. geospatial-cube-processor  →  clip, stack, compute zonal stats
+4. (gcf-pipeline runs them all in one go)
 ```
 
 ---

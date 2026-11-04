@@ -49,14 +49,14 @@ Say any of these and the skill activates automatically in Claude Code:
 | Output folder | yes | — | No spaces in path |
 | Admin level | no | 0 | 0 = country, 1 = province, 2 = district |
 | Aggregation | no | auto | "sum" if "accumulated/total"; "mean" otherwise |
-| Temporal frequency | no | `"YE"` | `"ME"` monthly, `"YE"` annual |
+| Temporal period | no | `"year"` | `"month"`, `"year"`, `"season"` (DJF/MAM/JJA/SON), `"window"` (custom dates), `"monthly_climatology"` |
 
 ## Outputs
 
 | File | Description |
 |------|-------------|
 | `*.nc` | Raw climate rasters (one per variable) |
-| `summary_ME_BOL_2020_2022.csv` | Monthly statistics per department |
+| `summary_month_BOL_2020_2022.csv` | Monthly statistics per department |
 | `bolivia_rsds_sfcWind_2020_2022.ipynb` | Jupyter notebook — open in VS Code or Jupyter |
 | `bolivia_rsds_sfcWind_2020_2022.html` | Standalone dashboard — double-click to open |
 

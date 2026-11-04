@@ -9,7 +9,7 @@ sidebar:
 tool). No programming experience required after the one-time setup.
 
 Unlike Antigravity, Codex may not automatically follow internal cross-references in skill
-files, so all five URLs are provided upfront in the system prompt.
+files, so all six URLs are provided upfront in the system prompt.
 
 ## Prerequisites
 

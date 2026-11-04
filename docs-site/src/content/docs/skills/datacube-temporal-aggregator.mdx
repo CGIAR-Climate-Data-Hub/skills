@@ -1,0 +1,71 @@
+---
+title: Datacube Temporal Aggregator
+description: Summarizes a gridded datacube over time — monthly, annual, seasonal, custom season windows, or monthly climatology.
+sidebar:
+  order: 3
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs>
+<TabItem label="Explanation">
+
+**Type:** Temporal processing  
+**Skill file:** `.agents/skills/datacube-temporal-aggregator/SKILL.md`  
+**Raw URL:** `https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/datacube-temporal-aggregator/SKILL.md`
+
+---
+
+Writes one function, `aggregate_time`, directly into your existing Python script or notebook. It
+reduces the `time` axis of an xarray datacube **per pixel** and keeps the result gridded, so the
+output can go to a map, a COG, a crop model, or `summarize_by_admin` in the
+[Geospatial Cube Processor](../geospatial-cube-processor/).
+
+## Periods
+
+| `period` | Groups | Label |
+|----------|--------|-------|
+| `"month"` | calendar months | `2020-01` |
+| `"year"` | calendar years | `2020` |
+| `"season"` | DJF, MAM, JJA, SON | `MAM 2020`, `DJF 2020-21` |
+| `"window"` | your dates, `{"name": ("MM-DD", "MM-DD")}` — an end before the start crosses the new year | `JJAS 2020`, `Nov-Mar 2020-21` |
+| `"monthly_climatology"` | each calendar month across all years | `month` = 1–12 |
+
+```python
+annual   = aggregate_time(ds, "year", "sum")
+seasonal = aggregate_time(ds, "season", "mean")
+rains    = aggregate_time(ds, "window", "sum",
+                          windows={"long rains": ("03-01", "05-31"), "short rains": ("10-01", "12-31")})
+austral  = aggregate_time(ds, "window", "sum", windows={"Nov-Mar": ("11-01", "03-31")})
+clim     = aggregate_time(ds, "monthly_climatology", "sum")
+```
+
+## What it guards against
+
+- **Partial periods.** A period the data covers for less than 90 % of its days is dropped — a DJF
+  missing its December would otherwise read as a drought.
+- **Masked pixels as zero.** Sums keep all-NaN pixels as NaN, so later spatial means are not pulled
+  down.
+- **Climatology of totals.** "Average January rainfall" is the mean of the January totals, not their
+  sum.
+
+For a per-region table, run `aggregate_time` first, then `summarize_by_admin`.
+
+</TabItem>
+
+<TabItem label="Agents">
+
+Run the skill inside the coding agent you already use. Each one needs its setup done once; after that
+the trigger phrases are the same everywhere.
+
+**Example request**
+
+```
+From the CHIRPS NetCDF at D:/tmp/kenya_data, compute total rainfall for the long rains
+(Mar–May) and the short rains (Oct–Dec) for every year, and save each season as a COG.
+```
+
+This skill is also triggered automatically within the [GCF Pipeline](../gcf-pipeline/).
+
+</TabItem>
+</Tabs>

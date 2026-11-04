@@ -40,6 +40,7 @@ export default defineConfig({
             { label: 'Climate Data Download', slug: 'skills/climate-data-download' },
             { label: 'Soil Data Download', slug: 'skills/soil-data-download' },
             { label: 'Geospatial Cube Processor', slug: 'skills/geospatial-cube-processor' },
+            { label: 'Datacube Temporal Aggregator', slug: 'skills/datacube-temporal-aggregator' },
             { label: 'Notebook Plots', slug: 'skills/notebook-plots' },
             { label: 'Climate Dashboard', slug: 'skills/climate-dashboard' },
             { label: 'Spatial Crop Modeler', slug: 'skills/spatial-crop-modeler' },

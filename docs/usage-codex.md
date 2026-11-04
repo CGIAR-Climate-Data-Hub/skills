@@ -46,13 +46,16 @@ Before planning or executing anything, fetch and read ALL of these skill files:
 3. Geospatial processing sub-skill:
    https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/geospatial-cube-processor/SKILL.md
 
-4. Notebook plotting sub-skill:
+4. Temporal aggregation sub-skill:
+   https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/datacube-temporal-aggregator/SKILL.md
+
+5. Notebook plotting sub-skill:
    https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/notebook-plots/SKILL.md
 
-5. Dashboard sub-skill:
+6. Dashboard sub-skill:
    https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-dashboard/SKILL.md
 
-Treat the gcf-pipeline file as the controlling workflow. Treat the other four as delegated
+Treat the gcf-pipeline file as the controlling workflow. Treat the other five as delegated
 sub-skills referenced by that workflow.
 
 To fetch these files: if your environment has a URL-reading tool, use it. Otherwise use curl,
@@ -70,7 +73,7 @@ skill files.
 ```
 
 > **Why fetch all files upfront?** Unlike Antigravity's `read_url_content`, Codex may not
-> automatically follow internal cross-references in the skill files. Giving all five URLs
+> automatically follow internal cross-references in the skill files. Giving all six URLs
 > at once ensures nothing is missed. The skill files are small (a few KB each), so fetching
 > all of them adds only a few seconds.
 
@@ -92,7 +95,7 @@ Output to D:/tmp/bolivia_climate
 > significantly more tokens. Start short; extend once the pipeline is verified.
 
 Codex will:
-1. Fetch all five skill files from GitHub
+1. Fetch all six skill files from GitHub
 2. Show the user a plan and ask for confirmation
 3. Download data from NASA POWER
 4. Clip to Bolivia department boundaries

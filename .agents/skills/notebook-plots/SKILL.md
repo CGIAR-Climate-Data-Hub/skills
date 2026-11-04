@@ -41,7 +41,8 @@ Extract from context first. Ask only for what is genuinely unknown.
 
 | Condition | Plot type |
 |-----------|-----------|
-| Monthly frequency data | `seasonal_pattern` — bar chart by month |
+| Monthly frequency data, or a `month` column (monthly climatology) | `seasonal_pattern` — bar chart by month |
+| `period` labels such as `MAM 2020` or `JJAS 2020` (seasons / custom windows) | `time_series` (several years) or `admin_comparison` (one period) — show the `period` label on hover |
 | `admin_unit` column + multi-year | `time_series` — one line per region |
 | `admin_unit` column + single time step | `admin_comparison` — sorted bar chart |
 | No `admin_unit`, no time variation | `spatial_map` — raster heatmap from NetCDF |
@@ -83,7 +84,8 @@ import warnings; warnings.filterwarnings("ignore")
 
 df = pd.read_csv("{CSV_PATH}")
 df["time"] = pd.to_datetime(df["time"], errors="coerce")
-df["month"] = df["time"].dt.month
+if "month" not in df.columns:  # a monthly climatology CSV already has `month` and no `time`
+    df["month"] = df["time"].dt.month
 print(df.head())
 ```
 
@@ -99,8 +101,9 @@ Write **only** the function that matches. Fill all `{PLACEHOLDERS}` with real va
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 var = "{ACTUAL_VAR_NAME}"
 
-df_var = df[df["variable"] == var].sort_values("month")
-monthly_vals = df_var.set_index("month")["value"].reindex(range(1, 13))
+df_var = df[df["variable"] == var]
+# mean per calendar month: one bar per month even when the CSV holds several years
+monthly_vals = df_var.groupby("month")["value"].mean().reindex(range(1, 13))
 
 fig = go.Figure(go.Bar(
     x=MONTHS,
@@ -125,6 +128,7 @@ fig.show()
 fig = px.line(
     df[df["variable"] == "{VAR}"],
     x="time", y="value", color="admin_unit",
+    hover_data=[c for c in ["period"] if c in df.columns],  # e.g. "DJF 2020-21"
     title="{VARIABLE} — Time Series ({COUNTRY})",
     labels={"value": "{VARIABLE} ({UNITS})", "time": "Date", "admin_unit": "Region"},
     markers=True,

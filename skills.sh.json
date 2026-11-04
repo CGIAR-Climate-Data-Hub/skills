@@ -12,9 +12,10 @@
     },
     {
       "title": "Spatial processing & modeling",
-      "description": "Clip, stack, and aggregate geospatial cubes, and run spatial crop model simulations.",
+      "description": "Clip, stack, and aggregate geospatial cubes over space and time, and run spatial crop model simulations.",
       "skills": [
         "geospatial-cube-processor",
+        "datacube-temporal-aggregator",
         "spatial-crop-modeler"
       ]
     },

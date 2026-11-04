@@ -36,15 +36,16 @@ pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data
 == SKILL LOADING ==
 When the user gives you a climate data task, use the CDH climate pipeline skills from GitHub.
 
-Before planning or executing anything, use read_url_content to fetch ALL five skill files now:
+Before planning or executing anything, use read_url_content to fetch ALL six skill files now:
 
 1. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/gcf-pipeline/SKILL.md
 2. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-data-download/SKILL.md
 3. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/geospatial-cube-processor/SKILL.md
-4. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/notebook-plots/SKILL.md
-5. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-dashboard/SKILL.md
+4. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/datacube-temporal-aggregator/SKILL.md
+5. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/notebook-plots/SKILL.md
+6. https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-dashboard/SKILL.md
 
-Fetch all five BEFORE reading any of them. Treat gcf-pipeline as the controlling workflow.
+Fetch all six BEFORE reading any of them. Treat gcf-pipeline as the controlling workflow.
 
 == EXECUTION RULES ==
 - MCP tools: attempt using aggeodata/download_chirps etc. (slash format). If the tool returns an "unknown tool" or parser error, immediately fall back to a Python script using the aggeodata classes directly — do NOT retry the MCP call.
@@ -55,7 +56,7 @@ Fetch all five BEFORE reading any of them. Treat gcf-pipeline as the controlling
 - Execute all generated code using run_command.
 ```
 
-> **Why pre-fetch all five?** Fetching sub-skills on demand (mid-task) adds a round-trip
+> **Why pre-fetch all six?** Fetching sub-skills on demand (mid-task) adds a round-trip
 > each time, growing the context window with each call. Pre-fetching upfront costs one
 > small burst at the start and eliminates all mid-task pauses — significantly fewer API
 > calls and lower total token spend per task.
@@ -73,7 +74,7 @@ Output to D:/tmp/bolivia_climate
 ```
 
 Antigravity will:
-1. Fetch all five skill files from GitHub upfront
+1. Fetch all six skill files from GitHub upfront
 2. Show the user a plan and ask for confirmation
 3. Download data from NASA POWER
 4. Clip to Bolivia department boundaries

@@ -28,6 +28,7 @@ breaks `xarray`, `importlib.metadata`, and most other packages. Name temp script
 
 **Sub-skill paths** (relative to the project root):
 - Download: `.agents/skills/climate-data-download/SKILL.md`
+- Temporal: `.agents/skills/datacube-temporal-aggregator/SKILL.md`
 - Process:  `.agents/skills/geospatial-cube-processor/SKILL.md`
 - Visualize: `.agents/skills/notebook-plots/SKILL.md`
 
@@ -45,12 +46,16 @@ Extract from the user's prompt first. Ask only for what is genuinely missing.
 | Output folder | yes | — | **No spaces in path** |
 | Admin level | no | 0 | 0 = full country, 1 = province, 2 = district |
 | Aggregation | no | auto | "sum" if user says "accumulated/total"; "mean" otherwise |
-| Temporal frequency | no | `"YE"` | `"ME"` monthly, `"YE"` annual, `None` = no resampling |
+| Temporal period | no | `"year"` | `"month"`, `"year"`, `"season"` (DJF/MAM/JJA/SON), `"window"` + `windows={"name": ("MM-DD", "MM-DD")}` for a crop or rainy season, `"monthly_climatology"`, `None` = native step. See `aggregate_time` in datacube-temporal-aggregator |
 | Plot type | no | auto | auto-detected from variable count + temporal frequency |
 
 **Auto-detect rules (apply silently):**
 - "accumulated" / "total" → `agg_method="sum"`; otherwise → `"mean"`
-- Single variable + `temporal_freq="ME"` → `plot_type="seasonal_pattern"`
+- "monthly", "per month" → `period="month"`; "annual", "per year" → `"year"`; "per season", "DJF/MAM…"
+  → `"season"`; named dates ("Jun–Sep", "Nov to Mar", "long rains Mar–May") → `"window"`;
+  "average month", "climatology", "typical year" → `"monthly_climatology"`. A named season with no
+  dates ("main season", "Meher") — ask for the dates; do not guess them
+- Single variable + `period` in (`"month"`, `"monthly_climatology"`) → `plot_type="seasonal_pattern"`
 - Multiple variables → `plot_type="dashboard"`
 - `admin_level ≥ 1` + multi-year → `plot_type="time_series"`
 - `admin_level ≥ 1` + single time step → `plot_type="admin_comparison"`
@@ -70,10 +75,12 @@ STAGE 3 — DOWNLOAD  (runs in this session via climate-data-download skill)
 |------------------|------------|---------------------------|
 | {variable}       | {source}   | {aggeodata class}         |
 
-STAGE 4 — PROCESS  (runs in this session via geospatial-cube-processor skill)
-- Mask to: {Country} (ISO3: {ISO3}, admin level {N})
-- Aggregate: {agg_method} per {temporal_freq}
-- Save: {OUTPUT_FOLDER}/summary_{freq}_{ISO3}_{year_range}.csv
+STAGE 4 — PROCESS  (runs in this session)
+- Mask to: {Country} (ISO3: {ISO3}, admin level {N})                      (geospatial-cube-processor)
+- Temporal: {agg_method} per {period} {windows, if any — e.g. JJAS 06-01 → 09-30}  (datacube-temporal-aggregator)
+- Spatial: mean per admin unit                                             (geospatial-cube-processor)
+- Incomplete periods at the edges of the date range are dropped (e.g. a DJF missing its December)
+- Save: {OUTPUT_FOLDER}/summary_{period}_{ISO3}_{year_range}.csv
 
 STAGE 5 — VISUALIZE
 - Notebook:    {OUTPUT_FOLDER}/{country}_{variable}_{year}.ipynb          (notebook-plots skill, Plotly)
@@ -106,18 +113,21 @@ State any defaults you applied so the user can correct them.
 
 ---
 
-## Stage 4 — Process (delegate to geospatial-cube-processor)
+## Stage 4 — Process (delegate to geospatial-cube-processor + datacube-temporal-aggregator)
 
-> **Read** `.agents/skills/geospatial-cube-processor/SKILL.md`.
+> **Read** `.agents/skills/geospatial-cube-processor/SKILL.md` and
+> `.agents/skills/datacube-temporal-aggregator/SKILL.md`.
 >
-> Use the `mask_to_admin` and `summarize_by_admin` function implementations from that
-> skill. Execute them via Bash Python (do not write them to the user's file — run
-> them in-session to produce a CSV). Apply the parameters from Stage 1:
-> - ISO3 country code and admin level for `mask_to_admin`
-> - `agg_method` and `temporal_freq` for `summarize_by_admin`
-> - Save the result CSV to `{OUTPUT_FOLDER}/summary_{freq}_{ISO3}_{year_range}.csv`
+> Execute via Bash Python (do not write the functions to the user's file — run them in-session
+> to produce a CSV), in this order, with the parameters from Stage 1:
+> 1. `mask_to_admin` (geospatial-cube-processor) — ISO3 country code and admin level
+> 2. `aggregate_time` (datacube-temporal-aggregator) — `period`, `agg_method`, `windows`; skip when
+>    `period` is `None`
+> 3. `summarize_by_admin` (geospatial-cube-processor) — spatial mean per admin unit
+> - Save the result CSV to `{OUTPUT_FOLDER}/summary_{period}_{ISO3}_{year_range}.csv`
 >
-> After saving: report the CSV path and print the first few rows.
+> After saving: report the CSV path, print the first few rows, and name any periods dropped
+> as incomplete.
 
 ---
 

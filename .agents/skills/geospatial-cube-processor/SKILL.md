@@ -4,7 +4,9 @@ description: >
   Expert at writing geospatial processing functions inline into the user's existing Python script or notebook.
   Use this skill whenever the user wants to: mask or clip raster data to an admin boundary or country,
   stack or combine multiple xarray Datasets into a single cube, compute zonal statistics or aggregate
-  raster values by region or time period, or export raster data as Cloud Optimized GeoTIFF (COG).
+  raster values by region, or export raster data as Cloud Optimized GeoTIFF (COG).
+  Spatial only — for monthly, annual, seasonal, custom-window, or climatology summaries over time,
+  use the datacube-temporal-aggregator skill first, then summarize its output here.
   Works with any gridded source — climate, soil, elevation, land use — as long as it uses standard
   lat/lon dimensions and EPSG:4326 CRS. Also triggers when the user mentions GADM boundaries, rioxarray
   clipping, xarray merging, zonal stats, or COG export in the context of spatial analysis.
@@ -27,7 +29,7 @@ Ask only what is unknown:
 
 - **Masking**: Admin level (0 = country, 1 = province, 2 = district)? Local shapefile or fetch from GADM?
 - **Stacking**: Target resolution — "coarsest", "finest", or a specific value in degrees? Resampling method (default: bilinear)?
-- **Summarizing**: Aggregation method (mean / sum / min / max)? Temporal frequency — monthly (`"ME"`), seasonal (`"QE"`), annual (`"YE"`), or none? Export to CSV?
+- **Summarizing**: Spatial statistic (default `mean`)? Export to CSV? If the user also wants monthly / annual / seasonal values, run the **datacube-temporal-aggregator** skill (`.agents/skills/datacube-temporal-aggregator/SKILL.md`) on the Dataset first and pass its output here.
 - **COG export**: Which variables to export? Output directory?
 
 ---
@@ -170,23 +172,22 @@ def stack_datasets(
 
 ## Function 3 — `summarize_by_admin` (Zonal Statistics)
 
-Computes per-admin-unit statistics from a Dataset, returning a tidy DataFrame. Use when the user says "average per district", "zonal stats", "summarize by region", "rainfall per province", or wants a table of values.
+Computes per-admin-unit statistics from a Dataset, returning a tidy DataFrame. Use when the user says "average per district", "zonal stats", "summarize by region", "rainfall per province", or wants a table of values. This function is **spatial only**: it reduces each unit's pixels and keeps whatever time step the Dataset already has. For monthly, annual, seasonal, or window totals, run `aggregate_time` from the **datacube-temporal-aggregator** skill first — temporal aggregation per pixel, then the spatial statistic here — so "accumulated rainfall per department" is the department mean of per-pixel totals, never a sum over pixels.
 
 ```python
-from datetime import datetime
-import xarray as xr
 import geopandas as gpd
 import pandas as pd
 import rioxarray
+import xarray as xr
 
 def summarize_by_admin(
     ds: xr.Dataset,
     boundaries: gpd.GeoDataFrame,
-    agg_method: str = "mean",
-    temporal_freq: str = None,
+    spatial_agg: str = "mean",
     output_csv: str = None
 ) -> pd.DataFrame:
-    agg_fn = agg_method  # "mean", "sum", "min", or "max"
+    ds = ds.rio.set_spatial_dims(x_dim="lon", y_dim="lat").rio.write_crs("EPSG:4326")
+    boundaries = boundaries.to_crs("EPSG:4326")
     records = []
 
     for _, row in boundaries.iterrows():
@@ -196,33 +197,27 @@ def summarize_by_admin(
             or row.get("name")
             or row.get("GID_0", "unknown")
         )
-        geom_gdf = gpd.GeoDataFrame([row], crs=boundaries.crs)
-
-        ds_clip = ds.rio.set_spatial_dims(x_dim="lon", y_dim="lat", inplace=True)
-        ds_clip = ds_clip.rio.write_crs("EPSG:4326", inplace=True)
         try:
-            ds_unit = ds_clip.rio.clip(geom_gdf.geometry, geom_gdf.crs, all_touched=True)
+            ds_unit = ds.rio.clip([row.geometry], boundaries.crs, all_touched=True)
         except Exception:
             continue
 
-        has_time = "time" in ds_unit.dims
-
         for var in ds_unit.data_vars:
-            da = ds_unit[var]
-            if has_time and temporal_freq:
-                da_agg = getattr(da.resample(time=temporal_freq), agg_fn)()
-                for t in da_agg.time.values:
-                    val = float(getattr(da_agg.sel(time=t), agg_fn)(dim=["lat", "lon"]).values)
-                    records.append({"admin_unit": unit_name, "variable": var, "time": str(t), "value": val})
+            da = getattr(ds_unit[var], spatial_agg)(dim=["lat", "lon"])
+            if "month" in da.dims:  # monthly climatology from datacube-temporal-aggregator
+                for m in da.month.values:
+                    records.append({"admin_unit": unit_name, "variable": var, "time": None,
+                                    "period": f"{int(m):02d}", "month": int(m),
+                                    "value": float(da.sel(month=m))})
+            elif "time" in da.dims:
+                for i in range(da.sizes["time"]):
+                    d = da.isel(time=i)
+                    records.append({"admin_unit": unit_name, "variable": var,
+                                    "time": pd.Timestamp(d.time.values).strftime("%Y-%m-%d"),
+                                    "period": str(d.period.values) if "period" in d.coords else None,
+                                    "value": float(d)})
             else:
-                spatial_agg = getattr(da, agg_fn)(dim=["lat", "lon"])
-                if has_time:
-                    for t in spatial_agg.time.values:
-                        val = float(spatial_agg.sel(time=t).values)
-                        records.append({"admin_unit": unit_name, "variable": var, "time": str(t), "value": val})
-                else:
-                    val = float(spatial_agg.values)
-                    records.append({"admin_unit": unit_name, "variable": var, "time": None, "value": val})
+                records.append({"admin_unit": unit_name, "variable": var, "time": None, "value": float(da)})
 
     df = pd.DataFrame(records)
     if output_csv:
@@ -231,9 +226,9 @@ def summarize_by_admin(
 ```
 
 **Key notes:**
-- Static layers (no `time` dim) are handled in the `else` branch — they produce one row per admin unit per variable
-- `temporal_freq` uses pandas offset aliases: `"ME"` = month-end, `"QE"` = quarter-end, `"YE"` = year-end
-- The returned DataFrame always has columns: `admin_unit`, `variable`, `time`, `value`
+- Static layers (no `time` dim) produce one row per admin unit per variable
+- `spatial_agg` (default `mean`) is the statistic over the pixels in each unit. Keep `mean` for climate variables — summing millimetres over pixels has no physical meaning
+- Columns: `admin_unit`, `variable`, `time` (`YYYY-MM-DD`; the period start when the input came from `aggregate_time`), `period` (readable label such as `MAM 2020`, when present), `value`; a monthly climatology has `time` empty and a `month` column (1–12) instead
 - When `output_csv` is provided, the file is written automatically
 
 ---

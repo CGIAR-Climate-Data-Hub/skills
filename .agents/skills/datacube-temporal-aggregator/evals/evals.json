@@ -1,0 +1,47 @@
+{
+  "skill_name": "datacube-temporal-aggregator",
+  "evals": [
+    {
+      "prompt": "I have daily ERA5 2 m temperature `ds_t2m` (dims valid_time/lat/lon, Kelvin) for Ethiopia from 2010-01-01 to 2020-12-31. Give me the monthly mean temperature and the DJF/MAM/JJA/SON seasonal means as gridded NetCDF files.",
+      "expected_output": "The time dimension is renamed valid_time -> time first. aggregate_time(ds, 'month', 'mean') and aggregate_time(ds, 'season', 'mean') produce gridded Datasets saved with to_netcdf. agg_method is mean (temperature is a state, not an amount). DJF 2009-10 (missing its December) and DJF 2020-21 (missing Jan-Feb) are dropped as incomplete and reported. Kelvin is noted, with a conversion offered.",
+      "files": [],
+      "assertions": [
+        "valid_time is renamed to time before aggregation",
+        "agg_method is 'mean' for temperature",
+        "aggregate_time is called with period='month' and with period='season'",
+        "the incomplete DJF seasons at both ends of the record are dropped and reported",
+        "output stays gridded and is written with to_netcdf",
+        "the units (Kelvin) are mentioned"
+      ],
+      "id": 1
+    },
+    {
+      "id": 2,
+      "prompt": "I have daily CHIRPS rainfall `ds_pr` for Kenya (2015-01-01 to 2022-12-31, dims time/lat/lon) and county boundaries in `gdf_counties`. I want total rainfall for the long rains (March–May) and the short rains (October–December) per county for every year, plus the average monthly rainfall across the whole period. Save both to CSV.",
+      "expected_output": "aggregate_time with period='window', agg_method='sum', windows={'long rains': ('03-01','05-31'), 'short rains': ('10-01','12-31')}, then summarize_by_admin from geospatial-cube-processor (spatial mean per county); a second call with period='monthly_climatology' and agg_method='sum' (mean of monthly totals across years). Two CSVs written. Sums use min_count=1 so masked pixels stay NaN.",
+      "files": [],
+      "assertions": [
+        "aggregate_time is used with period='window' and both windows given as MM-DD pairs (03-01 to 05-31, 10-01 to 12-31)",
+        "agg_method='sum' for the seasonal totals",
+        "the spatial statistic per county is a mean, not a sum over pixels",
+        "a monthly climatology is computed as the mean across years of monthly totals (period='monthly_climatology')",
+        "sum aggregation keeps all-NaN pixels as NaN (min_count=1), not zero",
+        "output rows carry a readable period label such as 'long rains 2015'",
+        "two CSV files are written"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Compute accumulated rainfall for the November–March season for each year from my daily dataset `ds` (2018-01-01 to 2023-12-31). Keep it gridded so I can map it.",
+      "expected_output": "aggregate_time(ds, 'window', 'sum', windows={'Nov-Mar': ('11-01','03-31')}) returning a gridded Dataset with one map per season labelled by start year (Nov-Mar 2018-19 … Nov-Mar 2022-23). The partial seasons at the edges (Jan–Mar 2018 and Nov–Dec 2023) are dropped as incomplete, and the user is told so.",
+      "files": [],
+      "assertions": [
+        "aggregate_time is used with a window whose end (03-31) is before its start (11-01), crossing the year",
+        "agg_method is 'sum'",
+        "seasons are labelled by the year they start in (e.g. 'Nov-Mar 2018-19')",
+        "the incomplete seasons at the start and end of the record are dropped and this is reported to the user",
+        "the result stays gridded (lat/lon kept), not reduced to a table"
+      ]
+    }
+  ]
+}

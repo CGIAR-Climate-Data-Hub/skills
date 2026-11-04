@@ -27,7 +27,8 @@ All required API patterns are in the skill files.
 | Download **and** visualize / "show me" / "full pipeline" | `.agents/skills/gcf-pipeline/SKILL.md` |
 | Download climate data only (no visualization) | `.agents/skills/climate-data-download/SKILL.md` |
 | Download soil data (SoilGrids) / build soil cube | `.agents/skills/soil-data-download/SKILL.md` |
-| Process / clip / aggregate already-downloaded data | `.agents/skills/geospatial-cube-processor/SKILL.md` |
+| Process / clip / stack / summarize by region (spatial) already-downloaded data | `.agents/skills/geospatial-cube-processor/SKILL.md` |
+| Summarize a datacube over time — monthly, annual, seasonal, custom window, climatology | `.agents/skills/datacube-temporal-aggregator/SKILL.md` |
 | Plot / chart / notebook from existing data | `.agents/skills/notebook-plots/SKILL.md` |
 | Spatial crop modeling / run crop model over a region | `.agents/skills/spatial-crop-modeler/SKILL.md` |
 | Build interactive climate dashboard | `.agents/skills/climate-dashboard/SKILL.md` |
@@ -46,6 +47,10 @@ any prompt implying fetching climate-only with no visualization or modeling. **N
 **soil-data-download**: "SoilGrids", "download soil [variable] for", "clay/sand/silt for", "soil organic carbon",
 "soil pH", "soil texture", "soil cube", any prompt referencing the soil depth layers (`0-5`, `5-15`, `15-30`,
 `30-60`, `60-100`), or the schema error `reference_variable: non-null string required` while attempting soil downloads.
+
+**datacube-temporal-aggregator**: "monthly totals/means", "annual rainfall", "per season", "DJF/MAM/JJA/SON",
+a date window ("Jun–Sep", "Nov to Mar", "growing season", "long rains"), "climatology", "average month".
+Combined with "per district/region" → run it first, then `summarize_by_admin` in geospatial-cube-processor.
 
 **spatial-crop-modeler**: "yield prediction", "run crop model", "simulate crop", "model [crop] in [country]",
 "estimate production", any prompt implying running a crop model spatially.
