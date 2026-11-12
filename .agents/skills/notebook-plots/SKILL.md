@@ -256,4 +256,4 @@ For fully offline use, pass `include_plotlyjs=True` (~3 MB self-contained).
 
 ---
 
-*Evaluation examples: [references/evals.json](references/evals.json)*
+*Evaluation examples: [evals/evals.json](evals/evals.json)*

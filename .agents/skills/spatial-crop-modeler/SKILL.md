@@ -120,8 +120,8 @@ Climate       : CHIRPS (pr) + CHIRTS (tasmax/tasmin) + AgERA5 (rsds)  ← or gee
 Soil          : SoilGrids (clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500)
 Crop          : Maize, cultivar IB1072
 Planting      : 2021-05-15, 1 window
-Output        : D:/ag_cube_test/hnd_small/yield_hnd_small.nc
-Working path  : D:/dssat_test
+Output        : outputs/hnd_small/yield_hnd_small.nc
+Working path  : <no-spaces-dir>/dssat_test
 
 Proceed? (yes/no)
 ```
@@ -154,15 +154,15 @@ mode: with_cubes
 
 # Either format. The climate-data-download skill writes Zarr by default, so a store
 # is the common case now; a .nc from an older run works unchanged.
-weather_path: D:/cubes/climate_hnd_2021_2021.zarr
-soil_path:    D:/cubes/soil_hnd.nc
-output_path:  D:/results/yield_hnd.nc
+weather_path: cubes/climate_hnd_2021_2021.zarr
+soil_path:    cubes/soil_hnd.nc
+output_path:  results/yield_hnd.nc
 
 simulation:
   country:      Honduras
   country_code: HND
   model:        dssat
-  working_path: D:/dssat_work   # NO SPACES — Fortran constraint
+  working_path: <no-spaces-dir>/dssat_work   # absolute path, NO SPACES anywhere in it — Fortran constraint
   ncores:       2
   max_pixels:   null            # null = all pixels; integer = quick test cap
   feature:      null            # null = entire bbox; e.g. "Comayagua"
@@ -202,7 +202,7 @@ accepted but emits a `DeprecationWarning`; prefer the nested form.
 ```yaml
 mode: full_pipeline
 
-output_dir: D:/ag_cube_test/hnd_small
+output_dir: outputs/hnd_small
 suffix:     hnd_small
 
 spatial:
@@ -248,7 +248,7 @@ simulation:
   country:      Honduras
   country_code: HND
   model:        dssat
-  working_path: D:/dssat_work   # NO SPACES — Fortran constraint
+  working_path: <no-spaces-dir>/dssat_work   # absolute path, NO SPACES anywhere in it — Fortran constraint
   ncores:       2
   max_pixels:   null
   feature:      null
@@ -537,7 +537,7 @@ the "Manual datacube fixes" note in Step 5 above.
 
 ---
 
-*Evaluation examples: [references/evals.json](references/evals.json)*
+*Evaluation examples: [evals/evals.json](evals/evals.json)*
 *Agent configuration reference: [references/agent-config.md](references/agent-config.md)*
 *Troubleshooting (rc=99, skipped pixels, manual datacube fixes):
 [references/troubleshooting.md](references/troubleshooting.md)

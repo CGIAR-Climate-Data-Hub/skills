@@ -128,8 +128,8 @@ Soil download plan
 | Variables   | clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500 |
 | Depths      | 0-5, 5-15, 15-30, 30-60, 60-100 cm                               |
 | Extent      | [32.67, -17.13, 35.92, -9.36]  (Malawi)                          |
-| Output      | D:/data/malawi/soil_raw                                          |
-| Build cube? | yes → D:/data/malawi/soil_malawi.nc                              |
+| Output      | data/malawi/soil_raw                                             |
+| Build cube? | yes → data/malawi/soil_malawi.nc                                 |
 | Reference   | sand                                                             |
 
 ~50 raster tiles, 2–10 min depending on extent. Shall I proceed?
@@ -321,4 +321,4 @@ Shape: {DIMS}   (y, x, depth, variable as appropriate)
 
 ---
 
-*Evaluation examples: [references/evals.json](references/evals.json)*
+*Evaluation examples: [evals/evals.json](evals/evals.json)*
