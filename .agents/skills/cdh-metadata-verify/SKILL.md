@@ -1,0 +1,198 @@
+---
+name: cdh-metadata-verify
+description: >
+  Adversarial verification of a Climate Data Hub (CDH) metadata record against the data it
+  describes and the sources it cites. Use this skill whenever a CDH YAML record exists and someone
+  wants to know whether it is TRUE — not just schema-valid: "check this record", "verify the
+  metadata", "review this submission", "is this catalog entry correct", "QA the YAML before I
+  submit it", "what's wrong with this record", or as the last step after the cdh-metadata skill
+  has generated a record. Also use it to review a cdh-catalog pull request. It runs a deterministic
+  script that opens every data asset and diffs it against the record, then guides a hostile
+  human-style review of the fields no script can settle, then has a metadata-only sub-agent try
+  to use the data and log where it gets stuck. It never edits the record.
+---
+
+# CDH Metadata Verify — assume every field is wrong until the data or a primary source proves it
+
+The schema validator in `cdh-metadata-standard` answers "is this well-formed?". This skill answers
+"is this **correct**?". A record can pass the schema with the wrong bounding box, a variable that
+does not exist in the store, a licence the provider never granted, a DOI that points at a different
+paper, or a template whose files are named the other way round. Each of those was found in the live
+catalog the first time this ran.
+
+Three parts. Run all three. Report findings; **never fix the record silently** (standard §4.6: an
+authored value always wins; a disagreement is reported for a person to decide).
+
+---
+
+## Part 1 — the deterministic script
+
+```bash
+python scripts/verify_record.py <record.yaml> [--standard-dir <clone of cdh-metadata-standard>] [--md report.md] [--json report.json]
+python scripts/verify_record.py records/*/*.yaml --md catalog-review.md          # a whole catalog
+python scripts/verify_record.py record.yaml --no-remote                           # offline consistency only
+python scripts/verify_record.py record.yaml --md verify-report.md --review REVIEW.md  # + human checklist for authored fields
+```
+
+`--md` keeps a hand-written `## Triage` section already in the file, so reruns do not wipe the
+reviewer's notes. `--review` writes `REVIEW.md` once (never overwritten): every *authored* field
+(standard §4, "a person, always") with the question a person must answer, ending with the **AI usage
+disclosure** block to paste at the top of the catalog PR (agreed in cdh-catalog#74 — the catalog keeps
+no AI marker in the metadata).
+
+Requires `pyyaml` and `requests`. Each optional library unlocks a class of checks and its absence
+is reported as `INFO`, never counted as a pass: `rasterio` (GeoTIFF/COG), `xarray` + `zarr>=3`
+(Zarr v2/v3), `duckdb` (Parquet/CSV over HTTP). `--standard-dir` adds `validate-yaml.js`
+(schema + cross-field rules); v0.3.0 records are reported as *not applicable* against v0.4.x
+tooling rather than failed. Exit code 1 = at least one HIGH finding.
+
+What it checks, by evidence source — full list in [references/checks.md](references/checks.md):
+
+| Evidence | Checks |
+| --- | --- |
+| **The asset itself** (opened over HTTP/S3) | bbox, CRS and grid step vs `spatial` / `xy` dimension; every declared variable exists as an array/band/column; dtype, fill value, units attrs; coordinate values vs `dimensions[].values`; raster category codes present but undeclared; Parquet column holds values with no `categories`; time axis vs `temporal`; COG layout when the media type claims it; `file_size` vs Content-Length; prefix non-empty |
+| **Templates and indexes** | `href_template` expanded from the structure's dimension values — first/middle/last of each axis — and each file HEAD-probed; `cdh-inventory` CSV has a `url` column and its rows resolve |
+| **Every URL** | HEAD/ranged GET with retries; `s3://` converted to the public HTTPS form; a Zarr root probed via `zarr.json`/`.zmetadata`; blocking paths (`data`, `doi`, `citation.url`, `processing`, `extensions`) → HIGH, others MED/LOW (403 from bot-blocking hosts → LOW, "check in a browser") |
+| **Crossref** | DOI resolves; Crossref title vs `citation.title`/`title` (similarity < 0.55 → HIGH: the DOI may describe a paper, not the data); issued year vs `citation.date`; first authors vs `citation.authors` |
+| **SPDX + provider page** | every id in the `license` expression is an SPDX id or `LicenseRef-`; licence tokens found on the citation/landing page are compared with the declared licence (mismatch → MED "verify") |
+| **Hub vocab + catalog** | `spatial.geography` ids exist in `vocab/geography.json`, no parent/child redundancy; `foreign_keys[].reference.resource`, `parent`, `derived_from[].id` exist in `cdh-catalog`; FK fields exist on both sides (target Parquet opened) |
+| **Internal consistency** | id slug and file name; `version`/`created`/`updated` present (v0.4), ordered, not in the future; processing dates ≤ `updated`; licensor + maintainer contacts; author objects (v0.4); `date` vs `start/end` exclusive; `access_note` when not public; placeholder code URLs (`<your-org>`, `example.org`); duplicate asset names; extension URL version = `cdh_schema_version` |
+| **Prose** | placeholder markers, SAMPLE/FICTIONAL flags, years in the description absent from `temporal`, missing `not_recommended_for` |
+
+Severity: **HIGH** = a user would be misled or the asset is unusable as described (wrong extent,
+missing variable, dead data URL, wrong DOI, uncatalogued codes, bad FK target). **MED** = very
+likely wrong, low harm (size, dtype, fill value, undeclared column, dead secondary link). **LOW**
+= polish. **INFO** = could not be checked — say so in the review; it is not a pass.
+
+---
+
+## Part 2 — the adversarial pass (what no script can settle)
+
+Work through the record as a hostile reviewer with the script's report beside you. For each
+item: fetch the primary source. If you cannot verify it, write **unverifiable → NEEDS REVIEW**;
+never "correct" a value from memory.
+
+**HIGH — misleads a user or the Hub takes on a liability**
+
+- `license` is the **data** licence from the provider's terms page, not the licence of a code repo,
+  a paper, or a website footer. CC-BY vs CC0 vs "public domain" are different claims; NC/ND/SA
+  terms must be carried exactly (`CC-BY-NC-SA-3.0-IGO`, not `CC-BY-4.0`). For a redistribution,
+  the licence of the *redistribution* must be compatible with the source's.
+- `contact` roles are real: the `licensor` is the party that actually holds the rights (often the
+  producer's institution, not the person who converted it); the `maintainer` has agreed to be
+  accountable for the record; emails are published addresses (watch the fabrication signature:
+  one author's initials + another's surname; a personal gmail with no corroboration).
+- `citation` / `doi` point at the **dataset** (or its data paper), not a paper that merely used it.
+  Authors, year and publisher match the landing page. `related_publications` is where the paper
+  about the method goes.
+- `description` makes no claim the source does not make: no invented resolutions, dates, counts,
+  accuracies, coverage ("global" when it is 60°S–60°N), or method words ("bias-corrected",
+  "validated") that the provider does not use.
+- `processing[].derived_from` names the real inputs, with the version actually used; `code.url`
+  resolves to the code that produced *these* files (commit pinned), not a placeholder.
+- `structures[].variables[]` mean what they say: units are physical and correct (a density is per
+  km², a total is a sum, a fraction is 0–1), direction-of-reading is stated, and a per-species /
+  per-crop store is declared per array, not as one umbrella variable.
+- `cdh.usage.not_recommended_for` names the real misuse cases (trend claims on a product whose
+  inputs changed; station-level use of a satellite product; comparing incompatible flavours).
+- Duplicate: is this the same resource as an existing record under another id or version?
+
+**HIGH — authored judgement fields (a person with domain knowledge must sign these off)**
+
+The script can prove a link dead or a unit wrong; it cannot prove a use case sensible. On an
+AI-drafted record, treat these as unreviewed until `REVIEW.md` is ticked and the header says
+`reviewed by <name> <date>`:
+
+- `cdh.usage.intended_uses` — a concrete task at a stated scale the data is fit for at its
+  resolution and coverage; never "research" or "decision-making".
+- `cdh.usage.not_recommended_for` — the misuse that would actually happen, a `reason` that is true
+  for *this* dataset, and a `use_instead` that exists and is better. Ask: what would I most worry
+  about a first-time user doing? If it is not listed, it is missing.
+- Limitations — record-level `note`: coverage gaps, aggregation level, artefacts, revisions,
+  licence traps. There is no separate limitations field.
+- Assumptions — `processing[].description` / `note`: modelled vs observed, thresholds, weighting,
+  projections mixed with actuals.
+
+Lessons from the first human reviews (OECD CRS, three rounds). Check each before a person sees the
+record; every one of them cost a review round:
+
+- **Licence from the producer's own terms page, data separated from documents.** The OECD's CC BY
+  4.0 grant covers its written content; its data have their own terms. A licence copied from a
+  publications page is the commonest wrong licence.
+- **Description lists what the dataset contains** (its variables or measures, in a sentence or
+  two), leaving the detail to `structures`.
+- **Coverage says exactly which places or units are in and out, with a link** to the producer's
+  list (e.g. the DAC List of ODA Recipients), not just a name for the list.
+- **Limitations are practical and in plain language:** what is missing, what it covers, how it is
+  revised and when, what the finest geography is. API quirks belong in `data[].description`, not
+  in `note`.
+- **Keep incorrect uses, limitations and assumptions apart.** `note` holds limitations (say so in
+  its first line); assumptions behind the values go in `processing`; misuses go in
+  `not_recommended_for`. Licence text goes in `license`/`attribution`, not `note`.
+- **Method says how the producer compiles the data**, with the source documents linked **inline,
+  where the text refers to them**. Never write "linked from this record".
+- **Intended uses each give the context, the how, and a runnable example**, not a one-line label.
+- **Not-recommended uses are full actions in plain language** ("Using this dataflow to measure
+  climate finance", not "Climate finance from this dataflow"). Include high-level methodological
+  misuses (totals read as complete, commitments read as spending), not only technical traps.
+
+**MED — wrong but low-harm**
+
+- `title` verbatim from the provider; `version` is the provider's label (`v2r2`), not ours.
+- `spatial.geography` is the coverage the data has, not the project's ambition.
+- `temporal.update_frequency` and `end_date: null` only when the resource really grows.
+- `keywords` are topical; controlled terms carry `scheme`+`uri` that resolve.
+- `attribution` present when the provider mandates wording (Copernicus, OSM, JMP).
+- `file_size` and `media_type` on every asset.
+
+**LOW — polish**
+
+- Names follow the data lake conventions (lowercase kebab ids, snake_case variables).
+- Sidecars (`AGENTS.md`, code lists, examples) exist and are referenced with roles.
+
+---
+
+## Part 3 — usability test by a metadata-only agent
+
+The script and the adversarial pass check that the record is true. Neither checks that it is
+**usable**. So spawn a sub-agent that sees only the record and the URLs inside it. Give it a real
+task built from `cdh.usage.intended_uses` plus a test geography, e.g. "development finance to
+Kenya; can I get Homa Bay County?". It downloads a small sample, answers the task, and logs every
+step as OK / GUESSED / BAFFLED / BLOCKED, with the fix it needed. It ends with a 1-10 score for
+"could a first-time user succeed with this record alone?".
+
+Start it in the background at the beginning, so it runs while you do Parts 1 and 2. Then check
+its claims against the source before you act on them. Merge its findings into the table with
+check `user-test`: HIGH for anything that yields a wrong number without warning. Re-run it after
+substantive changes. Target score: 8 or more before submission.
+
+Prompt template, task recipe, triage table and score guide: `references/user-test-agent.md`.
+This part found the costliest error in the first record it ran on (a provider aggregate silently
+halving a country total), after the schema check, the link check, Part 1 and a human reviewer had
+all passed it.
+
+---
+
+## Output
+
+One severity-ranked table, script findings and adversarial findings merged, then a verdict:
+
+```
+| Sev | Path | Check | Finding | Record says | Observed / source | Fix |
+```
+
+Verdict is one of **ready to submit** (no HIGH, every MED either fixed or consciously accepted
+with a reason, Part 3 score 8 or more), **needs changes** (list the HIGH items), or **cannot verify** (list what was
+unreachable and who can check it). Mark anything the script reported as INFO/unchecked explicitly
+as **UNVERIFIED** — silence is not a pass.
+
+Hand the table to the author or reviewer. Do not rewrite the record; if asked to, apply only the
+fixes a person has approved, one field at a time, and re-run the script.
+
+## Reference
+
+- Standard §4.6 (authored vs machine-derived values; disagreements are review findings) and the
+  authoring guide's *What review cannot decide*:
+  <https://github.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard/blob/main/spec/authoring-guide.md>
+- Generating a record: the `cdh-metadata` skill. Run this skill after it, before submission.
+- Submission: CDH Metadata Generator → `cdh-catalog` "Submit metadata record" issue → bot PR → CODEOWNER review.
