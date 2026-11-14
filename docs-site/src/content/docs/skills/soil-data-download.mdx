@@ -44,7 +44,8 @@ Depths (all in cm): `0-5`, `5-15`, `15-30`, `30-60`, `60-100`.
 
 ## The two non-obvious gotchas
 
-1. **CRS** — SoilGrids serves data in Interrupted Goode Homolosine. `SoilDataCubeBuilder`'s
+1. **CRS** — the default Hugging Face store is already EPSG:4326, but ISRIC serves data in
+   Interrupted Goode Homolosine. `SoilDataCubeBuilder`'s
    default `crs="ESRI:54052"` produces broken extents. **Always pass
    `crs="+proj=igh +lat_0=0 +lon_0=0 +datum=WGS84 +units=m +no_defs"` and
    `target_crs="EPSG:4326"` explicitly.**
@@ -95,11 +96,12 @@ no account and no key.
 | `available_water` | Field capacity minus wilting point over the profile, in mm — the number that decides how long a crop goes between rains. |
 | `plot_soil` | Draws **one** variable across the depths and returns the rest as depth-wise means. Ten variables over five depths is fifty full-resolution panels, which exhausts the Colab kernel. |
 
-<Aside type="note" title="Two resolutions in one cube">
-The general properties come from the 250 m coverage API; the three water-retention layers
-(`wv0010`, `wv0033`, `wv1500`) are published **only at 1 km**. A cube has one grid, so whichever
-variable you name as `reference_variable` decides which group gets resampled — the notebook reports
-which way it went. `ocd` and `ocs` appear in the SoilGrids catalogue but are not wired into
+<Aside type="note" title="Where the data comes from">
+By default every layer comes from the [SoilGrids v2 1 km Zarr datacube](https://huggingface.co/datasets/aaguilar90/soilgrids-v2-1km)
+on Hugging Face: all twelve properties on one grid, one read per variable — seconds instead of
+minutes. Ask for ISRIC (`backend="isric"`) when you need 250 m texture and chemistry; the
+water-retention layers (`wv0010`, `wv0033`, `wv1500`) are published **only at 1 km**, so a 250 m cube
+resamples one group — whichever variable you name as `reference_variable` decides which way. `ocd` and `ocs` appear in the SoilGrids catalogue but are not wired into
 aggeodata, so the notebook refuses them rather than returning a cube quietly missing those layers.
 </Aside>
 

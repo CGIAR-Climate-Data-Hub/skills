@@ -1,6 +1,6 @@
 ---
 name: soil-data-download
-description: "Downloads SoilGrids global soil property rasters (clay, sand, silt, bulk density, organic carbon, pH, water content at multiple depths) and optionally stacks them into a validated soil datacube. Trigger this skill whenever the user mentions SoilGrids, soil texture, soil organic carbon, soil pH, soil water retention, soil depth layers (`0-5`, `5-15`, `15-30`, `30-60`, `60-100` cm), or asks to download / build / stack soil data for any country, region, or bounding box — even if they don't say 'SoilGrids' explicitly (e.g. 'I need clay and sand for Malawi', 'soil cube for Mzimba', 'download soil data for the Sahel'). Also trigger when the user hits a `reference_variable: non-null string required` schema error trying to use `climate-data-download` for soil — that pipeline is climate-only; this skill handles the soil path. Do NOT trigger for climate variables (precipitation, temperature, RH, ET) — use `climate-data-download` for those."
+description: "Downloads SoilGrids global soil property rasters (clay, sand, silt, bulk density, organic carbon, pH, water content at multiple depths) — by default SoilGrids v2 at 1 km from its Zarr datacube on Hugging Face, or 250 m from ISRIC on request — and optionally stacks them into a validated soil datacube. Trigger this skill whenever the user mentions SoilGrids, soil texture, soil organic carbon, soil pH, soil water retention, soil depth layers (`0-5`, `5-15`, `15-30`, `30-60`, `60-100` cm), or asks to download / build / stack soil data for any country, region, or bounding box — even if they don't say 'SoilGrids' explicitly (e.g. 'I need clay and sand for Malawi', 'soil cube for Mzimba', 'download soil data for the Sahel'). Also trigger when the user hits a `reference_variable: non-null string required` schema error trying to use `climate-data-download` for soil — that pipeline is climate-only; this skill handles the soil path. Do NOT trigger for climate variables (precipitation, temperature, RH, ET) — use `climate-data-download` for those."
 license: "MIT"
 ---
 
@@ -20,10 +20,19 @@ runs both via `ag-cube-cm`'s combined schema.
 
 # WHAT SOILGRIDS PROVIDES
 
-SoilGrids is the only soil source `aggeodata` currently routes to. It serves two
-*different* products through two different endpoints, and the difference matters:
+SoilGrids 2.0 is the only soil source `aggeodata` routes to. It comes from one of two
+backends, chosen with `backend=`:
 
-**250 m — the WCS coverage API**
+| Backend | Where | Resolution | Speed |
+|---------|-------|------------|-------|
+| **`hf` (default)** | SoilGrids v2 1 km Zarr datacube on Hugging Face — https://huggingface.co/datasets/aaguilar90/soilgrids-v2-1km | **1 km (1/120°) for every variable**, EPSG:4326 | one read per variable covers all depths — seconds for a district, about a minute for a country |
+| `isric` | ISRIC's WCS coverage API (VRT fallback) + 1 km hydraulic bucket | 250 m texture & chemistry, 1 km `wv*` | one HTTP request per variable × depth — minutes |
+
+**Use `hf` unless the user asks for 250 m / "high resolution" / ISRIC directly**, or is
+mapping soil at field scale where 250 m detail is the point. Don't ask otherwise —
+state the default in the plan so they can change it.
+
+Variables (both backends; units are ISRIC's mapped units, as stored in the files):
 
 | Variable | Description | Default? |
 |----------|-------------|----------|
@@ -33,21 +42,22 @@ SoilGrids is the only soil source `aggeodata` currently routes to. It serves two
 | `bdod`   | Bulk density (cg/cm³)                  | yes |
 | `cfvo`   | Coarse fragments volumetric (cm³/dm³)  | yes |
 | `soc`    | Soil organic carbon (dg/kg)            | yes |
-| `phh2o`  | pH in H₂O                              | yes |
+| `phh2o`  | pH in H₂O (× 10)                       | yes |
 | `nitrogen` | Total nitrogen (cg/kg)               | optional |
 | `cec`    | Cation exchange capacity (mmol(c)/kg)  | optional |
+| `wv0010` | Volumetric water content at 10 kPa (10⁻³ cm³/cm³)                   | crop modeling |
+| `wv0033` | Volumetric water content at 33 kPa, field capacity (10⁻³ cm³/cm³)   | crop modeling |
+| `wv1500` | Volumetric water content at 1500 kPa, wilting point (10⁻³ cm³/cm³)  | crop modeling |
 
-**1 km — the aggregated hydraulic layers**, streamed from ISRIC's pre-release bucket.
-These are the water-retention points a crop model needs:
+Divide by 10 for %, g/kg → g/100 g, etc. (`bdod` and `nitrogen` by 100). The files
+are identical in layout and units whichever backend wrote them, so the cube builder
+and `spatial-crop-modeler` do not care which was used.
 
-| Variable | Description | Default? |
-|----------|-------------|----------|
-| `wv0010` | Volumetric water content at 10 kPa                   | crop modeling |
-| `wv0033` | Volumetric water content at 33 kPa (field capacity)  | crop modeling |
-| `wv1500` | Volumetric water content at 1500 kPa (wilting point) | crop modeling |
+**With `hf`, every variable is on the same 1 km grid** — the reference variable does
+not resample anything and the 250 m / 1 km discussion below does not apply.
 
-**The resolution split is the thing to tell the user about.** A request mixing texture
-with water content produces a cube at **one** resolution — whichever
+**With `isric`, the resolution split is the thing to tell the user about.** A request
+mixing texture with water content produces a cube at **one** resolution — whichever
 `reference_variable` names — so one group is always resampled:
 
 - `reference_variable: sand` (or any 250 m variable) → the water layers are upsampled
@@ -62,15 +72,18 @@ soil mapping, where texture detail is the point, prefer a 250 m reference. Say w
 picked and why.
 
 **Not available**: `ocd` (organic carbon density) and `ocs` (organic carbon stocks) are
-routed by neither endpoint. Asking for them logs `Unknown SoilGrids variable` and
+routed by neither backend. Asking for them logs `Unknown SoilGrids variable` and
 **silently produces no file** — the run appears to succeed with those layers simply
 absent. Do not offer them; if the user asks, say they are not wired up rather than
 letting the gap show up later as a missing variable.
 
-**Standard depths**: `0-5`, `5-15`, `15-30`, `30-60`, `60-100` cm.
+**Standard depths**: `0-5`, `5-15`, `15-30`, `30-60`, `60-100` cm. The `hf` store
+holds exactly these five; `100-200` exists only at ISRIC, and the downloader fetches
+it from there automatically (at 250 m for texture/chemistry) with a warning.
 
-**Native CRS**: Interrupted Goode Homolosine. **You must reproject explicitly to
-`EPSG:4326`** to use the cube with climate data — see Step 4.
+**CRS**: `hf` files are already EPSG:4326. `isric` files are in Interrupted Goode
+Homolosine — **reproject explicitly to `EPSG:4326`** to use the cube with climate
+data. Step 4 passes both CRS arguments, which is correct for either backend.
 
 ---
 
@@ -102,11 +115,12 @@ pip install "aggeodata[download,mcp] @ git+https://github.com/CGIAR-Climate-Data
 | Parameter | Question | Default |
 |-----------|----------|---------|
 | Country / bbox | ISO3 code, country name, or `[xmin, ymin, xmax, ymax]` in EPSG:4326? | **required** |
+| Source | Backend — see the table above | `hf` (SoilGrids v2 1 km Zarr). Switch to `isric` only on request |
 | Variables | Which soil properties? | the 10 rows marked *yes* or *crop modeling* above. `ocd` / `ocs` are not available — do not offer them |
 | Depths | Which depth layers? | all five (`0-5`, `5-15`, `15-30`, `30-60`, `60-100`) |
 | Output folder | Where to save? **No spaces in path.** | **required** |
 | Build cube? | Stack the downloaded rasters into a single NetCDF? | yes |
-| Reference variable | The variable whose grid defines the cube's resolution — see the 250 m / 1 km split above, because this decides which group gets resampled | `wv1500` (package default; use a 250 m variable when texture detail is the point) |
+| Reference variable | The variable whose grid defines the cube's resolution. With `hf` all variables share one grid, so any works; with `isric` see the 250 m / 1 km split above | `wv1500` (package default; with `isric`, use a 250 m variable when texture detail is the point) |
 
 If the user gives a country name, resolve to ISO3 + bounding box:
 
@@ -124,16 +138,19 @@ Display this table and wait for confirmation before downloading:
 Soil download plan
 | Setting     | Value                                                            |
 |-------------|------------------------------------------------------------------|
-| Source      | SoilGrids                                                        |
+| Source      | SoilGrids v2, 1 km — Hugging Face Zarr (default; say if you want 250 m from ISRIC) |
 | Variables   | clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500 |
 | Depths      | 0-5, 5-15, 15-30, 30-60, 60-100 cm                               |
 | Extent      | [32.67, -17.13, 35.92, -9.36]  (Malawi)                          |
-| Output      | D:/data/malawi/soil_raw                                          |
-| Build cube? | yes → D:/data/malawi/soil_malawi.nc                              |
-| Reference   | sand                                                             |
+| Output      | data/malawi/soil_raw                                             |
+| Build cube? | yes → data/malawi/soil_malawi.nc                                 |
+| Reference   | wv1500                                                           |
 
-~50 raster tiles, 2–10 min depending on extent. Shall I proceed?
+50 GeoTIFFs (10 variables × 5 depths), about a minute for a country. Shall I proceed?
 ```
+
+With `isric`, say instead: "~50 requests, 5–15 min depending on extent; texture at
+250 m, water content at 1 km" and name the reference variable you chose and why.
 
 ## Step 3 — Download
 
@@ -151,10 +168,18 @@ dl = SoilGridsDownloader(
     soil_layers=["clay","sand","silt","bdod","cfvo","soc","phh2o","wv0010","wv0033","wv1500"],
     depths=["0-5","5-15","15-30","30-60","60-100"],
     output_folder="{OUTPUT}/soil_raw",
+    backend="hf",        # default — SoilGrids v2 1 km Zarr; "isric" for 250 m WCS
 )
 downloaded = dl.download(boundaries=[{XMIN},{YMIN},{XMAX},{YMAX}])
-# returns {filename: local_path}
+# returns list[str] of GeoTIFF paths, e.g. .../clay_0-5cm_mean.tif
 ```
+
+Check the log after it runs. A `Hugging Face SoilGrids store failed … falling back to
+ISRIC` or `Fetching N layer(s) from ISRIC instead` warning means those layers came from
+ISRIC — tell the user, because texture/chemistry from ISRIC is 250 m, not 1 km.
+
+Use a **new output folder when switching backends**: existing files are reused whichever
+backend wrote them, so an old 250 m `clay_0-5cm_mean.tif` would be kept as is.
 
 Full signature is in [`references/python_api.md`](references/python_api.md).
 
@@ -174,6 +199,7 @@ soil:
   enabled:   true
   variables: [clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500]
   depths:    ["0-5", "5-15", "15-30", "30-60", "60-100"]
+  backend:   hf        # default (1 km Zarr); "isric" for 250 m WCS
 general:
   suffix:             "{SUFFIX}"
   ncores:             1
@@ -200,14 +226,14 @@ Downstream tools want a single multi-variable NetCDF, not loose tiles. Use
 ```python
 from aggeodata.transform.soil_cube import SoilDataCubeBuilder
 
-# SoilGrids native projection — never accept the builder's default ESRI:54052,
-# it produces a cube with bad geographic extents.
+# SoilGrids native projection, used only for ISRIC files that lack CRS metadata
+# (hf files carry EPSG:4326). Never pass ESRI:54052 — some GDAL builds mis-apply it.
 IGH = "+proj=igh +lat_0=0 +lon_0=0 +datum=WGS84 +units=m +no_defs"
 
 builder = SoilDataCubeBuilder(
     data_folder="{OUTPUT}/soil_raw",
     variables=["clay","sand","silt","bdod","cfvo","soc","phh2o","wv0010","wv0033","wv1500"],
-    reference_variable="sand",
+    reference_variable="wv1500",
     crs=IGH,
     target_crs="EPSG:4326",
 )
@@ -299,10 +325,13 @@ Shape: {DIMS}   (y, x, depth, variable as appropriate)
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `reference_variable: non-null string required` | Used the climate YAML schema with `soil.enabled: true` but didn't set `general.reference_variable` | Set `general.reference_variable: sand` (or another enabled soil layer) |
-| Cube coordinates are huge numbers (e.g. `y = 1500000`) | The builder kept SoilGrids' native projected CRS | Pass `crs=IGH` and `target_crs="EPSG:4326"` explicitly to `SoilDataCubeBuilder` |
+| Cube coordinates are huge numbers (e.g. `y = 1500000`) | (`isric`) The builder kept SoilGrids' native projected CRS | Pass `crs=IGH` and `target_crs="EPSG:4326"` explicitly to `SoilDataCubeBuilder` |
 | `no valid index for a 0-dimensional object` when sampling the cube | Cube is in flat format (`clay_0-5cm_mean`, etc.) | Run `reshape_flat_soil_cube(ds).to_netcdf(...)` then reopen |
-| Downloads fail with HTTP 403 / connection errors | SoilGrids rate limit | Wait, then retry — `SoilGridsDownloader` resumes; existing tiles are skipped |
-| `CPLE_AppDefined in wv0010_0-5cm_mean.tif: This file used to have optimizations in its layout, but those have been... invalidated by later changes` | **Harmless.** The 1 km `wv*` GeoTIFFs in ISRIC's pre-release bucket were written as cloud-optimized files and later edited in place, so part of the COG layout no longer matches. GDAL still reads the data correctly; it just can't use the optimized streaming path, so those reads need more HTTP range requests and run slower | Nothing to fix — reassure the user rather than letting them think the download failed. One line per `wv*` file is expected. To quiet just this message without hiding real GDAL warnings, filter the `rasterio._env` logger on the substring `invalidated by later changes` |
+| `TypeError: ... unexpected keyword argument 'backend'` | The installed `aggeodata` predates the Hugging Face backend | Reinstall with the Step 0 `pip install` command (add `--force-reinstall --no-deps` if pip says it is already satisfied), then rerun |
+| `Hugging Face SoilGrids store failed (…); falling back to ISRIC` | Hugging Face unreachable (network, proxy, outage) | The run continues on ISRIC — slower, texture at 250 m. Tell the user; rerun later into a **new** folder for a uniform 1 km set |
+| `Extent [...] does not intersect the SoilGrids store` | Box outside 60°S–84°N, or lon/lat swapped | Check the order is `[xmin, ymin, xmax, ymax]` in degrees |
+| Downloads fail with HTTP 403 / connection errors (`isric`) | SoilGrids rate limit | Wait, then retry — `SoilGridsDownloader` resumes; existing tiles are skipped |
+| `CPLE_AppDefined in wv0010_0-5cm_mean.tif: This file used to have optimizations in its layout, but those have been... invalidated by later changes` (`isric` only) | **Harmless.** The 1 km `wv*` GeoTIFFs in ISRIC's pre-release bucket were written as cloud-optimized files and later edited in place, so part of the COG layout no longer matches. GDAL still reads the data correctly; it just can't use the optimized streaming path, so those reads need more HTTP range requests and run slower | Nothing to fix — reassure the user rather than letting them think the download failed. One line per `wv*` file is expected. To quiet just this message without hiding real GDAL warnings, filter the `rasterio._env` logger on the substring `invalidated by later changes` |
 | `UnicodeEncodeError` on Windows | Non-ASCII chars in output path | Use ASCII-only paths (e.g. `D:/data/malawi`) |
 | Soil cube doesn't overlap weather cube | Extent rounding or CRS mismatch | Re-clip both to the same bounding box and ensure both are EPSG:4326 |
 
@@ -321,4 +350,4 @@ Shape: {DIMS}   (y, x, depth, variable as appropriate)
 
 ---
 
-*Evaluation examples: [references/evals.json](references/evals.json)*
+*Evaluation examples: [evals/evals.json](evals/evals.json)*

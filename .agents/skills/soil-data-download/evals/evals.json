@@ -14,7 +14,8 @@
         "SoilDataCubeBuilder is called with crs containing '+proj=igh' and target_crs='EPSG:4326'",
         "reference_variable='sand' is passed to the builder",
         "Output NetCDF path matches soil_malawi*.nc under D:/data/malawi",
-        "CRS validation (y < 90, x < 180) is performed after building the cube"
+        "CRS validation (y < 90, x < 180) is performed after building the cube",
+        "The plan names the default source — SoilGrids v2 1 km from the Hugging Face Zarr (backend='hf') — without asking the user to choose"
       ]
     },
     {
@@ -43,6 +44,31 @@
         "If flat vars are found, reshape_flat_soil_cube is imported from aggeodata.transform.soil_cube and applied",
         "After reshape (if any), the cube is saved back to the same NetCDF path",
         "CRS bounds assertions (|y.min()| < 90, |x.min()| < 180) are evaluated"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I'm mapping soil texture at field scale in Rwanda's Musanze district and need the full 250 m SoilGrids resolution for clay, sand and silt at 0-5 and 5-15 cm. Save to D:/rwa/soil_raw and build the cube.",
+      "expected_output": "Because the user asks for 250 m explicitly, SoilGridsDownloader is called with backend='isric' (not the 1 km Hugging Face default). The plan states 250 m from ISRIC and the slower per-layer requests. The cube is built with a 250 m reference variable (clay, sand or silt) and crs='+proj=igh ...', target_crs='EPSG:4326'.",
+      "files": [],
+      "assertions": [
+        "SoilGridsDownloader is instantiated with backend='isric'",
+        "The plan states the 250 m resolution and ISRIC as the source",
+        "reference_variable is one of clay, sand, silt (a 250 m layer)",
+        "SoilDataCubeBuilder is given crs containing '+proj=igh' and target_crs='EPSG:4326'"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Get clay, sand, wv0033 and wv1500 for all five standard depths over the bounding box [36.6, -1.5, 37.1, -1.0] and save them to D:/ken/soil_raw. Just the rasters, no cube.",
+      "expected_output": "Uses the default Hugging Face 1 km backend (backend='hf' or omitted), downloads 4 variables x 5 depths = 20 GeoTIFFs, skips the cube build, and reports the paths. If the log shows a fallback-to-ISRIC warning, the agent tells the user those layers are 250 m.",
+      "files": [],
+      "assertions": [
+        "SoilGridsDownloader is called with backend='hf' or without a backend argument",
+        "depths cover 0-5, 5-15, 15-30, 30-60, 60-100",
+        "No SoilDataCubeBuilder call is made",
+        "The reply reports 20 files (or lists their paths)",
+        "Any 'falling back to ISRIC' warning in the log is reported to the user rather than ignored"
       ]
     }
   ]

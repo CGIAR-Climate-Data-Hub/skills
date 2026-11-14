@@ -120,8 +120,8 @@ Climate       : CHIRPS (pr) + CHIRTS (tasmax/tasmin) + AgERA5 (rsds)  ← or gee
 Soil          : SoilGrids (clay, sand, silt, bdod, cfvo, soc, phh2o, wv0010, wv0033, wv1500)
 Crop          : Maize, cultivar IB1072
 Planting      : 2021-05-15, 1 window
-Output        : D:/ag_cube_test/hnd_small/yield_hnd_small.nc
-Working path  : D:/dssat_test
+Output        : outputs/hnd_small/yield_hnd_small.nc
+Working path  : <no-spaces-dir>/dssat_test
 
 Proceed? (yes/no)
 ```
@@ -143,7 +143,7 @@ converted. What still matters:
 | Coordinates in **degrees** | `ag-cube-cm` stamps `EPSG:4326` on the cube rather than reprojecting, so a cube in projected metres silently reports latitude 1670931 to DSSAT. This is the one that still bites. |
 | Axis names | `time` or `date` both work, and `lat`/`lon`/`latitude`/`longitude` are renamed to `y`/`x` automatically. A cube written by aggeodata's Zarr exporter arrives as `time`/`lat`/`lon` and needs no edit. |
 | CF datetime time coord | `ds.time.dtype.kind == "M"` — if integer zeros, see stacker fix in `troubleshooting.md` |
-| Soil and weather on the **same grid** | The valid-pixel mask ANDs the two cubes, so coordinates that differ anywhere give **zero** pixels — a run that looks like it worked and produced nothing. SoilGrids at 250 m against CHIRPS at 5 km is the normal case, not user error: resample the soil cube onto the climate grid (see below). Keep the climate grid — upsampling weather would invent daily series nobody measured, while averaging soil within a climate cell is an honest summary of it. |
+| Soil and weather on the **same grid** | The valid-pixel mask ANDs the two cubes, so coordinates that differ anywhere give **zero** pixels — a run that looks like it worked and produced nothing. SoilGrids at 1 km (250 m from ISRIC) against CHIRPS at 5 km is the normal case, not user error: resample the soil cube onto the climate grid (see below). Keep the climate grid — upsampling weather would invent daily series nobody measured, while averaging soil within a climate cell is an honest summary of it. |
 
 A `spatial_ref` coordinate and `grid_mapping` attributes are fine now — the loader clears a stale
 pointer before writing the CRS. They only needed stripping in earlier releases.
@@ -154,15 +154,15 @@ mode: with_cubes
 
 # Either format. The climate-data-download skill writes Zarr by default, so a store
 # is the common case now; a .nc from an older run works unchanged.
-weather_path: D:/cubes/climate_hnd_2021_2021.zarr
-soil_path:    D:/cubes/soil_hnd.nc
-output_path:  D:/results/yield_hnd.nc
+weather_path: cubes/climate_hnd_2021_2021.zarr
+soil_path:    cubes/soil_hnd.nc
+output_path:  results/yield_hnd.nc
 
 simulation:
   country:      Honduras
   country_code: HND
   model:        dssat
-  working_path: D:/dssat_work   # NO SPACES — Fortran constraint
+  working_path: <no-spaces-dir>/dssat_work   # absolute path, NO SPACES anywhere in it — Fortran constraint
   ncores:       2
   max_pixels:   null            # null = all pixels; integer = quick test cap
   feature:      null            # null = entire bbox; e.g. "Comayagua"
@@ -202,7 +202,7 @@ accepted but emits a `DeprecationWarning`; prefer the nested form.
 ```yaml
 mode: full_pipeline
 
-output_dir: D:/ag_cube_test/hnd_small
+output_dir: outputs/hnd_small
 suffix:     hnd_small
 
 spatial:
@@ -248,7 +248,7 @@ simulation:
   country:      Honduras
   country_code: HND
   model:        dssat
-  working_path: D:/dssat_work   # NO SPACES — Fortran constraint
+  working_path: <no-spaces-dir>/dssat_work   # absolute path, NO SPACES anywhere in it — Fortran constraint
   ncores:       2
   max_pixels:   null
   feature:      null
@@ -469,7 +469,7 @@ assert float(soil.y.min()) <= float(weather.y.max()), "Soil/weather Y extents do
 assert float(soil.x.min()) <= float(weather.x.max()), "Soil/weather X extents don't overlap."
 
 # 2. Resolution and CRS must match the climate grid.
-#    SoilGrids (~0.002°) is ~25× finer than CHIRPS (0.05°) and may carry a
+#    SoilGrids (1 km, ~0.0083°; 250 m from ISRIC) is 6–25× finer than CHIRPS (0.05°) and may carry a
 #    different CRS. reproject_match fixes both in one step — it reprojects to
 #    the climate CRS and resamples to the climate resolution.
 from rasterio.enums import Resampling
@@ -483,8 +483,8 @@ if abs(soil_res - weather_res) > weather_res * 0.1:
     ref = weather.isel(time=0)[[next(v for v in weather.data_vars if v != "spatial_ref")]]
     ref  = ref.rio.set_spatial_dims(x_dim="x", y_dim="y").rio.write_crs("EPSG:4326")
     soil = soil.rio.set_spatial_dims(x_dim="x", y_dim="y").rio.write_crs("EPSG:4326")
-    # Resampling.average, NOT nearest or bilinear: going 250 m -> 5 km, nearest keeps
-    # one source pixel per cell and discards the other ~400, so a cell's clay content
+    # Resampling.average, NOT nearest or bilinear: going 1 km -> 5 km, nearest keeps
+    # one source pixel per cell and discards the other ~35 (~400 from 250 m), so a cell's clay content
     # becomes whichever point landed on the centre. average uses all of them.
     soil = soil.rio.reproject_match(ref, resampling=Resampling.average).load()
     # The source store's chunk encoding rides along and no longer describes this
@@ -537,7 +537,7 @@ the "Manual datacube fixes" note in Step 5 above.
 
 ---
 
-*Evaluation examples: [references/evals.json](references/evals.json)*
+*Evaluation examples: [evals/evals.json](evals/evals.json)*
 *Agent configuration reference: [references/agent-config.md](references/agent-config.md)*
 *Troubleshooting (rc=99, skipped pixels, manual datacube fixes):
 [references/troubleshooting.md](references/troubleshooting.md)

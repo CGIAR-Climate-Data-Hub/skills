@@ -159,7 +159,7 @@ rc=99 cases are caught in the first two.
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | All pixels skipped | Grid edges have NaN from coarser AgERA5/SoilGrids | Expected — increase `max_pixels` or check interior pixels |
-| Soil/climate grid mismatch — resolution or CRS differ | SoilGrids (~0.002°) is ~25× finer than CHIRPS (0.05°) and may carry a different CRS; ag-cube-cm requires them on the same grid | Reproject soil to CHIRPS CRS and resolution in one step: `soil.rio.write_crs("EPSG:4326").rio.reproject_match(weather_ds, resampling="bilinear").to_netcdf("soil_resampled.nc")` — then update `soil_path` in the config |
+| Soil/climate grid mismatch — resolution or CRS differ | SoilGrids (1 km by default, 250 m from ISRIC) is 6–25× finer than CHIRPS (0.05°) and may carry a different CRS; ag-cube-cm requires them on the same grid | Reproject soil to CHIRPS CRS and resolution in one step: `soil.rio.write_crs("EPSG:4326").rio.reproject_match(weather_ds, resampling="bilinear").to_netcdf("soil_resampled.nc")` — then update `soil_path` in the config |
 | All pixels skipped: soil slice is all NaN | Soil cube coordinates are in projected metres, not degrees — `sel(y,x)` lands outside the data | Rebuild soil cube with `crs='+proj=igh ...'` and `target_crs='EPSG:4326'` (see `soil-data-download` skill) |
 | All pixels skipped: `no valid index for a 0-dimensional object` | Soil cube is in flat format (`clay_0-5cm_mean`) — needs reshaping | Run `reshape_flat_soil_cube(ds).to_netcdf(...)` then re-run simulation |
 | `UnicodeEncodeError` | Non-ASCII chars in output path on Windows | Use ASCII-only paths |
