@@ -13,25 +13,33 @@ on rerun — existing files are skipped.
 from aggeodata.ingestion.soil import SoilGridsDownloader
 
 dl = SoilGridsDownloader(
-    soil_layers=[                                    # 14 valid layers, see SKILL.md
+    soil_layers=[                                    # 12 valid layers, see SKILL.md
         "clay", "sand", "silt", "bdod", "cfvo",
         "soc", "phh2o", "wv0010", "wv0033", "wv1500",
     ],
     depths=["0-5", "5-15", "15-30", "30-60", "60-100"],   # cm
-    output_folder="D:/data/soil_raw",
+    output_folder="data/soil_raw",
+    backend="hf",          # default: SoilGrids v2 1 km Zarr on Hugging Face
+                           # "isric": ISRIC WCS/VRT — 250 m texture & chemistry, slower
+    # zarr_url=...         # optional: another copy of the store
 )
 
-# returns dict: {filename: local_path}
+# returns list[str]: the local GeoTIFF paths (written now or already on disk)
 downloaded_paths = dl.download(
     boundaries=[-3.2554, 4.7367, 1.1918, 11.1733],   # [xmin, ymin, xmax, ymax] WGS-84
 )
 ```
 
 Notes:
-- One tile per (variable, depth, statistic) combination — typically ~50 files
-  for the default 10 variables × 5 depths.
-- The downloader uses `rasterio` HTTP range requests against the SoilGrids
-  WCS service. No API key required.
+- One file per (variable, depth): `{var}_{depth}cm_mean.tif`, int16 in ISRIC's
+  mapped units (clay g/kg, pH × 10, …), nodata −32768 — the same from either backend.
+- `backend="hf"` reads https://huggingface.co/datasets/aaguilar90/soilgrids-v2-1km
+  — one read per variable covers all its depths; files are EPSG:4326 at 1/120°.
+  Layers it cannot serve (store unreachable, depth `100-200`) are fetched from ISRIC
+  automatically, with a warning.
+- `backend="isric"` makes one HTTP request per (variable, depth) against the
+  SoilGrids WCS service (VRT fallback); files are in Homolosine. No API key required.
+- The default store URL is exported as `aggeodata.ingestion.soil.HF_SOILGRIDS_URL`.
 
 ## 2. `SoilDataCubeBuilder`
 
