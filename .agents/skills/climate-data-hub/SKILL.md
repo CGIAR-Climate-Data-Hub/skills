@@ -31,8 +31,9 @@ Fetch the record as Markdown: `HUB/catalog/<id>/index.md`. The top lines give a
   never invent one.
 - `deprecated: true`: an older release. Use the current one at
   `HUB/catalog/<id>/index.md`.
-- `note`: caveats you must apply, such as projection, scale factors, units,
-  or update lag. Read it before using any values.
+- `note`, and each variable's `note` under `structures`: caveats you must
+  apply, such as projection, scale factors, units, or update lag. Read them
+  before using any values.
 - `cdh.usage.not_recommended_for`: if the user's goal is listed, say so and
   suggest its `use_instead`.
 - `data[]`: the ways to get the data. Pick one:

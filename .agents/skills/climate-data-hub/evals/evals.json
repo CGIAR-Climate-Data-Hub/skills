@@ -7,9 +7,18 @@
       "expected_output": "Fetches llms.txt, picks glw4-2020, reads its index.md, chooses the Zarr or the cattle COG from the cogs file list, loads only a window around Nairobi, and gives the record's Cite line.",
       "files": [],
       "assertions": [
-        {"name": "finds_glw4", "description": "Recommends the glw4-2020 dataset"},
-        {"name": "subsets_first", "description": "Reads a Nairobi window or one file, not the whole store"},
-        {"name": "cites_record", "description": "Includes the record's Cite line verbatim"}
+        {
+          "name": "finds_glw4",
+          "description": "Recommends the glw4-2020 dataset"
+        },
+        {
+          "name": "subsets_first",
+          "description": "Reads a Nairobi window or one file, not the whole store"
+        },
+        {
+          "name": "cites_record",
+          "description": "Includes the record's Cite line verbatim"
+        }
       ]
     },
     {
@@ -18,9 +27,18 @@
       "expected_output": "Uses the Zarr distribution (primary access) over HTTPS with storage_options client_kwargs trust_env=True, selects the 2023 time range and nearest point, and does not download the 118 GB store.",
       "files": [],
       "assertions": [
-        {"name": "uses_zarr", "description": "Opens the zarr-geo-chunked HTTPS location"},
-        {"name": "trust_env", "description": "Passes client_kwargs trust_env=True to fsspec"},
-        {"name": "point_and_time_subset", "description": "Selects the point and 2023 before computing"}
+        {
+          "name": "uses_zarr",
+          "description": "Opens the zarr-geo-chunked HTTPS location"
+        },
+        {
+          "name": "trust_env",
+          "description": "Passes client_kwargs trust_env=True to fsspec"
+        },
+        {
+          "name": "point_and_time_subset",
+          "description": "Selects the point and 2023 before computing"
+        }
       ]
     },
     {
@@ -29,8 +47,38 @@
       "expected_output": "Reads the agera5 record, notes access is restricted and needs a CDS token (or Earth Engine account), asks the user for it before loading, and offers climate-data-download as the alternative route.",
       "files": [],
       "assertions": [
-        {"name": "flags_restricted", "description": "Says an account or token is needed before trying to load"},
-        {"name": "no_fake_credentials", "description": "Does not invent or hard-code a token"}
+        {
+          "name": "flags_restricted",
+          "description": "Says an account or token is needed before trying to load"
+        },
+        {
+          "name": "no_fake_credentials",
+          "description": "Does not invent or hard-code a token"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Using the Climate Action Data Hub, what's the topsoil (0-5 cm) clay content at -13.96, 33.79 in Malawi?",
+      "expected_output": "Reads the soilgrids record and applies both caveats: the record note says the maps are in Interrupted Goode Homolosine (ESRI:54052), so the lat/lon point is reprojected before sampling; the clay variable note says values are g/kg x 10 stored as int16, so the raw value is divided by 10 to give percent. Reads only the one point over HTTPS, not a global map, and gives the record's Cite line. Expected answer (checked 2026-11-16): raw 180, so about 18% clay.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "reprojects_point",
+          "description": "Transforms the lat/lon point to ESRI:54052 (Homolosine) before sampling, or samples with a CRS-aware method"
+        },
+        {
+          "name": "applies_scale_factor",
+          "description": "Divides the raw clay value by 10 and reports it as percent (or g/kg) with the unit stated"
+        },
+        {
+          "name": "point_read_only",
+          "description": "Reads a single pixel or small window, not the global map"
+        },
+        {
+          "name": "cites_record",
+          "description": "Includes the record's Cite line verbatim"
+        }
       ]
     }
   ]
