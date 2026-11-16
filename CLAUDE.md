@@ -11,6 +11,7 @@ in the skill files.
 
 | User intent | Skill file to read |
 |-------------|-------------------|
+| Find / open / load a dataset from the Climate Action Data Hub, or a Hub URL | `.agents/skills/climate-data-hub/SKILL.md` |
 | Download **and** visualize / "show me" / "I want to see" / "full pipeline" | `.agents/skills/gcf-pipeline/SKILL.md` |
 | Download climate data only (no visualization requested) | `.agents/skills/climate-data-download/SKILL.md` |
 | Download soil data (SoilGrids) / build soil cube | `.agents/skills/soil-data-download/SKILL.md` |

@@ -3,6 +3,13 @@
   "notGrouped": "bottom",
   "groupings": [
     {
+      "title": "Discover",
+      "description": "Find, inspect, and load datasets from the Climate Action Data Hub catalog.",
+      "skills": [
+        "climate-data-hub"
+      ]
+    },
+    {
       "title": "Data download",
       "description": "Fetch climate and soil data from CHIRPS, CHIRTS-ERA5, AgERA5, NASA POWER, and SoilGrids.",
       "skills": [

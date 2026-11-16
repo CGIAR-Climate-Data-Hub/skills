@@ -1,0 +1,37 @@
+{
+  "skill_name": "climate-data-hub",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Is there livestock data on the Climate Action Data Hub? I want cattle density around Nairobi.",
+      "expected_output": "Fetches llms.txt, picks glw4-2020, reads its index.md, chooses the Zarr or the cattle COG from the cogs file list, loads only a window around Nairobi, and gives the record's Cite line.",
+      "files": [],
+      "assertions": [
+        {"name": "finds_glw4", "description": "Recommends the glw4-2020 dataset"},
+        {"name": "subsets_first", "description": "Reads a Nairobi window or one file, not the whole store"},
+        {"name": "cites_record", "description": "Includes the record's Cite line verbatim"}
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "https://cgiar-climate-data-hub.github.io/catalog/chirts-era5-daily/ - get me 2023 daily max temperature for a point at 0.5N 37.5E. I'm in a sandbox behind a proxy.",
+      "expected_output": "Uses the Zarr distribution (primary access) over HTTPS with storage_options client_kwargs trust_env=True, selects the 2023 time range and nearest point, and does not download the 118 GB store.",
+      "files": [],
+      "assertions": [
+        {"name": "uses_zarr", "description": "Opens the zarr-geo-chunked HTTPS location"},
+        {"name": "trust_env", "description": "Passes client_kwargs trust_env=True to fsspec"},
+        {"name": "point_and_time_subset", "description": "Selects the point and 2023 before computing"}
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Can you load AgERA5 relative humidity from the Hub for Ghana?",
+      "expected_output": "Reads the agera5 record, notes access is restricted and needs a CDS token (or Earth Engine account), asks the user for it before loading, and offers climate-data-download as the alternative route.",
+      "files": [],
+      "assertions": [
+        {"name": "flags_restricted", "description": "Says an account or token is needed before trying to load"},
+        {"name": "no_fake_credentials", "description": "Does not invent or hard-code a token"}
+      ]
+    }
+  ]
+}
