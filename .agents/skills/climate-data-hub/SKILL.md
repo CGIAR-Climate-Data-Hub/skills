@@ -48,9 +48,7 @@ Tell the user the dataset, the format, and the license before loading.
 
 ## 3. Load
 
-Use the code in [references/loading.md](references/loading.md). (Fetched from
-the web? It's at
-`https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main/.agents/skills/climate-data-hub/references/loading.md`.)
+Use the code in [references/loading.md](references/loading.md).
 
 - Read a small subset first. Never load a whole dataset unless the user asks
   and the size is known.
@@ -63,7 +61,8 @@ Give the record's **Cite** line verbatim with every result.
 
 ## Other skills
 
-Pass on to these if they are installed:
+Pass on to these. If one isn't installed, fetch
+`HUB/.well-known/agent-skills/<name>/SKILL.md` and follow it.
 
 - Process loaded data: `geospatial-cube-processor`
 - Plot: `notebook-plots`, `climate-dashboard`, `sciplot-skill`
