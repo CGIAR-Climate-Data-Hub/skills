@@ -1,0 +1,62 @@
+{
+  "title": "Climate Data Hub Skills: AI agent skills for climate and agricultural geospatial data",
+  "upload_type": "software",
+  "description": "<p>Climate Data Hub Skills is a collection of AI agent skills (<code>SKILL.md</code> instruction sets) for geospatial data processing in agriculture and climate change research. Each skill turns a natural-language request into a reproducible workflow: downloading climate and soil data, building spatial datacubes, aggregating them in space and time, plotting results, running spatial crop models and documenting datasets with the CGIAR Climate Data Hub (CDH) metadata standard.</p><p>Skills included:</p><ul><li><strong>gcf-pipeline</strong>: end-to-end download, aggregation and visualization of climate variables.</li><li><strong>climate-data-download</strong>: climate data download (CHIRPS, AgERA5, NASA POWER and others) through the aggeodata package.</li><li><strong>soil-data-download</strong>: SoilGrids v2 download (1 km Zarr store on Hugging Face by default, 250 m from ISRIC on request) and soil datacube building.</li><li><strong>geospatial-cube-processor</strong>: clipping, stacking and spatial summaries of datacubes by administrative region.</li><li><strong>datacube-temporal-aggregator</strong>: monthly, annual, seasonal, custom-window and climatology aggregation of datacubes.</li><li><strong>notebook-plots</strong> and <strong>sciplot-skill</strong>: notebooks and publication-quality figures.</li><li><strong>climate-dashboard</strong>: interactive dashboards from aggregated climate tables.</li><li><strong>spatial-crop-modeler</strong>: spatial crop model runs over a region.</li><li><strong>cdh-metadata</strong> and <strong>cdh-metadata-verify</strong>: authoring and verifying CDH YAML metadata records.</li></ul><p>The skills follow the open agent-skills format and can be installed with <code>npx skills add CGIAR-Climate-Data-Hub/skills</code>. Documentation: <a href=\"https://cgiar-climate-data-hub.github.io/skills/\">https://cgiar-climate-data-hub.github.io/skills/</a>.</p>",
+  "creators": [
+    {
+      "name": "Aguilar-Ariza, Andrés",
+      "affiliation": "Alliance of Bioversity International and CIAT",
+      "orcid": "0000-0001-8179-9931"
+    },
+    {
+      "name": "Agudelo, Diego",
+      "affiliation": "Alliance of Bioversity International and CIAT"
+    },
+    {
+      "name": "Youngberg, Brayden",
+      "affiliation": "Alliance of Bioversity International and CIAT",
+      "orcid": "0009-0008-0103-0208"
+    },
+    {
+      "name": "Steward, Peter",
+      "affiliation": "Alliance of Bioversity International and CIAT",
+      "orcid": "0000-0003-3985-4911"
+    }
+  ],
+  "license": "MIT",
+  "access_right": "open",
+  "keywords": [
+    "AI agents",
+    "agent skills",
+    "climate data",
+    "geospatial",
+    "datacube",
+    "crop modeling",
+    "dashboard visualization",
+    "metadata",
+    "SoilGrids",
+    "CGIAR",
+    "Climate Data Hub"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://cgiar-climate-data-hub.github.io/skills/",
+      "relation": "isDocumentedBy",
+      "resource_type": "publication-softwaredocumentation",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://www.skills.sh/?q=CGIAR-Climate-Data-Hub",
+      "relation": "isSupplementTo",
+      "resource_type": "other",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://github.com/CGIAR-Climate-Data-Hub/cdh-metadata-standard",
+      "relation": "references",
+      "resource_type": "other",
+      "scheme": "url"
+    }
+  ],
+  "language": "eng"
+}

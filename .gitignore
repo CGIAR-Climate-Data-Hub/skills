@@ -18,3 +18,4 @@ climate_agent_colab_gemini.ipynb
 scripts/convert_legacy_cubes.py
 skills/gcf-pipeline-workspace/
 spaces/
+scripts/

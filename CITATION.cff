@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use these skills, please cite them using the metadata below."
+type: software
+title: "Climate Data Hub Skills: AI agent skills for climate and agricultural geospatial data"
+abstract: >-
+  A collection of AI agent skills (SKILL.md instruction sets) for geospatial data
+  processing in agriculture and climate change research: climate and soil data
+  download, datacube building, spatial and temporal aggregation, plotting, spatial
+  crop modeling and CGIAR Climate Data Hub metadata authoring.
+authors:
+  - family-names: "Aguilar Ariza"
+    given-names: "Andrés"
+    orcid: "https://orcid.org/0000-0001-8179-9931"
+    affiliation: "Alliance of Bioversity International and CIAT"
+repository-code: "https://github.com/CGIAR-Climate-Data-Hub/skills"
+url: "https://cgiar-climate-data-hub.github.io/skills/"
+license: MIT
+keywords:
+  - AI agents
+  - agent skills
+  - climate data
+  - geospatial
+  - datacube
+  - SoilGrids
+  - crop modeling
+  - metadata
+  - CGIAR
