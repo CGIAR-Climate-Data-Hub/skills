@@ -1,6 +1,7 @@
 {
   "repository": "https://raw.githubusercontent.com/CGIAR-Climate-Data-Hub/skills/main",
   "skills": {
+    "climate-data-hub": "/.agents/skills/climate-data-hub/SKILL.md",
     "gcf-pipeline": "/.agents/skills/gcf-pipeline/SKILL.md",
     "climate-data-download": "/.agents/skills/climate-data-download/SKILL.md",
     "soil-data-download": "/.agents/skills/soil-data-download/SKILL.md",
